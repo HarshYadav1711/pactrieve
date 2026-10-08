@@ -86,6 +86,14 @@ export default function LibraryHome() {
     } else await refresh();
   }
 
+  async function retryProcessing(id: string) {
+    setError(null);
+    const response = await fetch(`/api/documents/${id}/process`, {method: "POST"});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) setError(data.error || "Could not retry processing");
+    await refresh();
+  }
+
   const ready = documents.filter(d => d.status === "ready").length;
   const hasProblems = documents.some(d=>d.status === "failed");
   return <div className="app-shell">
@@ -127,6 +135,9 @@ export default function LibraryHome() {
                 {doc.error_message && <span className="warning-text">{doc.error_message}</span>}</div>
               <span className={`status ${doc.status}`}>{doc.status}</span>
               {doc.status==="ready" && <Link className="button subtle" href={`/documents/${doc.id}`}>Inspect ↗</Link>}
+              {(doc.status==="failed" || doc.status==="uploading") && (
+                <button className="button subtle" onClick={()=>void retryProcessing(doc.id)}>Retry</button>
+              )}
               <button className="button minimal delete" onClick={()=>void deleteDocument(doc.id)} aria-label={`Delete ${doc.name}`}>×</button>
             </article>)}</div>}
           {hasProblems && <p className="minor-hint">Failed uploads can be removed and replaced with corrected files.</p>}

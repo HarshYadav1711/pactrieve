@@ -4,51 +4,48 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail and 
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-**Note:** The “Phase” column below still uses the earlier coarse labels (0–6) from Phase 0 bootstrap. Prefer `docs/phases.md` (0–13) for new work planning; statuses themselves were not changed by the governance-pack integration.
+**Note:** Prefer `docs/phases.md` (0–13) for planning. The “Phase” column may still show coarse labels.
 
-Evidence gates for this update (2026-10-08 Phase 0 import):
+Evidence gates for this update (2026-10-08 Phase 1):
 
 - `npm run typecheck` — pass
-- `npm test` — 16/16 pass
+- `npm test` — **29/29** pass
 - `npm run build` — pass (Next.js 16.4.0)
-- Live Supabase E2E — **not run** (no `.env.local`)
+- Live Supabase smoke (`scripts/phase1-live-smoke.mjs`) — **16/16** pass against configured private bucket + DB
+- Live 150-page synthetic PDF via initiate→upload→process→text→delete — pass (~6s locally)
 
 | ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
-| A1 | PDF/DOCX upload; reject other types | IMPLEMENTED_UNVERIFIED | `src/lib/documents/validate.ts`, `src/app/api/documents/initiate/route.ts`, `src/app/page.tsx` | MIME/ext Zod refine; magic signatures in extract path | Needs live Storage smoke; client MIME can be spoofed until process signature check | 0–1 |
-| A2 | Text extraction and persistence | IMPLEMENTED_UNVERIFIED | `extract.ts`, `pdf-text.ts`, `process/route.ts`, `db/schema.sql` | `pdf-text.test.mts` | Needs live PDF/DOCX against Supabase | 0–1 |
-| A3 | Processing status UX | PARTIAL | `src/app/page.tsx`, documents status fields | — | Statuses exist (uploading/processing/ready/failed); live polling UX not E2E verified | 0–1 |
-| A4 | Scanned / no-text PDF handling | IMPLEMENTED_UNVERIFIED | `extract.ts`, `process/route.ts` | — | Throws `NO_READABLE_TEXT`; OCR not supported; needs scanned sample smoke | 0–1 |
-| A5 | Document library (list, open, delete) | IMPLEMENTED_UNVERIFIED | `src/app/page.tsx`, `api/documents/**` | — | Needs live Supabase | 0–1 |
-| A6 | Document chat Q&A | NOT_STARTED | schema reserves `messages` | — | Phase boundary | 2 |
-| A7 | Streaming responses | NOT_STARTED | — | — | — | 2 |
-| A8 | Stop generation; keep partial | NOT_STARTED | schema has `stopped` status | — | Not wired | 2 |
-| A9 | Per-document chat history | NOT_STARTED | `conversations`, `messages` tables reserved | — | — | 2 |
-| A10 | Verified quotes (deterministic) | VERIFIED | `src/lib/evidence/verify.ts`, `api/.../verify` | `evidence.test.mts` (unit) | Chat integration not started; live API path needs Supabase | 0–2 |
-| A11 | Whitespace-tolerant matching | VERIFIED | `normalizeWithSourceMap` | evidence tests | Does not fuzzy-match words/digits | 0 |
-| A12 | Reject/remove unverified quotes in answers | NOT_STARTED | verify API exists | — | No answer pipeline yet | 2 |
-| A13 | Answer “not in document” instead of inventing | NOT_STARTED | — | — | — | 2 |
-| A14 | Large documents (~150 pages) strategy | PARTIAL | `chunks.ts`, FTS column | `chunks.test.mts` | Chunks exist; retrieval/coverage/abstention not built; sync process may timeout at 60s | 1–2 |
+| A1 | PDF/DOCX upload; reject other types | VERIFIED | `validate.ts`, `initiate/route.ts`, `page.tsx` | `validate.test.mts` + live smoke | Client MIME still advisory until process signatures; legacy `.doc` rejected | 1 |
+| A2 | Text extraction and persistence | VERIFIED | `extract.ts`, `pdf-text.ts`, `process/route.ts` | `extract.test.mts`, `pdf-text.test.mts` + live | Dense real PDFs may be slower than synthetic fixtures | 1 |
+| A3 | Processing status UX | VERIFIED | `page.tsx`, process statuses, Retry | Live list/poll/retry paths | No fake % progress; stuck processing reclaim after 2m | 1 |
+| A4 | Scanned / no-text PDF handling | VERIFIED | `extract.ts`, `process/route.ts` | extract + live scanned fixture | OCR not supported; partial empty pages warned via `unreadable_page_count` | 1 |
+| A5 | Document library (list, open, delete) | VERIFIED | `page.tsx`, documents APIs | Live list/reopen/delete cleanup | Storage-then-DB delete; partial failure returns 500 honestly | 1 |
+| A6 | Document chat Q&A | NOT_STARTED | schema reserves `messages` | — | Phase boundary | 3 |
+| A7 | Streaming responses | NOT_STARTED | — | — | — | 3 |
+| A8 | Stop generation; keep partial | NOT_STARTED | schema has `stopped` status | — | Not wired | 4 |
+| A9 | Per-document chat history | NOT_STARTED | `conversations`, `messages` reserved | — | — | 4 |
+| A10 | Verified quotes (deterministic) | VERIFIED | `verify.ts`, verify API | `evidence.test.mts` | Chat answer pipeline not started | 0–3 |
+| A11 | Whitespace-tolerant matching | VERIFIED | `normalizeWithSourceMap` | evidence tests | No fuzzy word/digit match | 0 |
+| A12 | Reject/remove unverified quotes in answers | NOT_STARTED | verify API exists | — | No answer pipeline yet | 3 |
+| A13 | Answer “not in document” instead of inventing | NOT_STARTED | — | — | — | 3 |
+| A14 | Large documents (~150 pages) strategy | PARTIAL | `chunks.ts`, process route | live 150-page ingest + chunk tests | **Ingestion** verified on synthetic 150-page PDF; retrieval/coverage/abstention is Phase 2; 60s host limit remains | 1–2 |
 | A15 | Partial read must not imply full coverage | NOT_STARTED | — | — | Policy decided; not implemented | 2 |
-| B1 | Citation highlighting in viewer | NOT_STARTED | inspector shows text only | — | Offsets ready for later PDF.js layer mapping | 3 |
-| B2 | Multi-document questions | NOT_STARTED | `conversation_documents` reserved | — | — | 4 |
-| B3 | Document comparison | NOT_STARTED | — | — | — | 4 |
-| C1 | Part C Option 1: DOCX tracked changes | NOT_STARTED | — | — | Not selected | — |
-| C2 | Part C Option 2: Agentic document research | NOT_STARTED | — | — | Selected; not started | 5 |
-| SUB1 | GitHub repository | PARTIAL | `.git/` | — | Local repo; remote/push not done | 0–6 |
-| SUB2 | Deployed link | NOT_STARTED | — | — | — | 6 |
-| SUB3 | README (run locally, done vs not) | PARTIAL | `README.md` | — | Screenshots still missing | 0–6 |
-| SUB4 | Demo video | NOT_STARTED | — | — | — | 6 |
-| SUB5 | Short technical note | NOT_STARTED | — | — | — | 6 |
+| B1 | Citation highlighting in viewer | NOT_STARTED | inspector text only | — | — | 5 |
+| B2 | Multi-document questions | NOT_STARTED | reserved tables | — | — | 7 |
+| B3 | Document comparison | NOT_STARTED | — | — | — | 8–9 |
+| C1 | Part C Option 1 | NOT_STARTED | — | — | Not selected | — |
+| C2 | Part C Option 2 | NOT_STARTED | — | — | Selected; not started | 10 |
+| SUB1 | GitHub repository | PARTIAL | `.git/` | — | Remote may exist; Phase 1 not pushed by agent | 0–12 |
+| SUB2 | Deployed link | NOT_STARTED | — | — | — | 12 |
+| SUB3 | README | PARTIAL | `README.md` | — | Screenshots still missing | 0–13 |
+| SUB4 | Demo video | NOT_STARTED | — | — | — | 13 |
+| SUB5 | Short technical note | NOT_STARTED | — | — | — | 13 |
 | X1–X7 | Optional extras | NOT_STARTED | — | — | Bonus only after A/B/C | — |
 
 ## Notes on offsets after reconstruction
 
 - PDF pages reconstructed via `reconstructPdfPage`, then joined with a single `\n` in `createCanonicalSource`.
 - Page `start_offset` / `end_offset` and chunk offsets refer to that canonical string (JS UTF-16 units).
-- `verifyQuote` remaps whitespace-normalized matches back through `originalOffset`, so verification offsets remain valid in canonical text even when quote whitespace differs.
+- `verifyQuote` remaps whitespace-normalized matches back through `originalOffset`.
 - Visual PDF coordinates are a separate concern (not implemented).
-
-## Stack paths (now present)
-
-`src/lib/evidence/verify.ts`, `src/lib/documents/*`, `db/schema.sql`, `tests/*` — imported from Phase 1 starter ZIP.

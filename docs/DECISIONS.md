@@ -1,5 +1,14 @@
 # Engineering decisions
 
+## 2026-10-08 — Phase 1 ingestion hardening
+
+- **Decision:** Keep multi-step Supabase writes (no fake cross-storage transaction). Use status claim (`uploading|failed` → `processing`), optional stale `processing` reclaim after 2 minutes, purge-then-insert for pages/chunks, and best-effort derived-row cleanup on failure before marking `failed`.
+- **Decision:** Validate DOCX as OOXML (`[Content_Types].xml` + `word/document.xml`), not ZIP magic alone. Reject empty buffers, MIME/extension mismatches, oversized metadata, and PDFs declaring `/Encrypt`.
+- **Decision:** Mark `pdfjs-dist` and `mammoth` as Next.js `serverExternalPackages` after live evidence that bundled `next start` could not open valid PDFs while the same extract path worked outside Next.
+- **Decision:** Deletion removes storage first (missing object tolerated), then DB row (cascade). Do not return success if either required step fails after a real error.
+- **Decision:** UI gains a **Retry** control for `uploading`/`failed` only — no design-system redesign.
+- **Observation:** Synthetic 150-page PDF processed live end-to-end in ~6s locally; dense commercial PDFs may still hit the 60s `maxDuration` on serverless hosts.
+
 ## 2026-10-08 — Governance pack adoption (docs-only)
 
 - **Decision:** Import `Pactrieve_Governance_Pack.zip` into the repo as `AGENTS.md` plus `docs/{rules,PRD,Architecture,Design,phases}.md` (and preserve pack `INSTALL_NOTES.md` under `docs/`).

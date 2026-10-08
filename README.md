@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 0 baseline (starter imported).** Upload, private storage initiation, extraction, document listing/deletion, extracted-text preview, and deterministic quote verification are present in code. They require Supabase setup and live integration testing before claiming end-to-end success. AI chat, streaming/cancellation, PDF page-overlay highlights, multi-document Q&A, comparison, and agentic tools are **not implemented**. Do not claim otherwise.
+> **Status: Phase 1 ingestion complete (local + live Supabase verified).** PDF/DOCX upload through private Storage, extraction, persistence, library reopen, retry, and delete cleanup work against a configured project. AI chat, streaming/cancellation, PDF page-overlay highlights, multi-document Q&A, comparison, and agentic tools are **not implemented**. Do not claim otherwise.
 
 ## Technology
 
@@ -104,21 +104,31 @@ Unit tests need no model key or database. They cover monetary hallucinations, pr
 
 | Area | Status |
 | --- | --- |
-| Document upload / extract / library UI | In code; needs live Supabase to verify E2E |
-| Deterministic quote verifier + unit tests | Present; unit tests are the verification gate |
-| Requirements matrix & assignment docs | Present |
+| Document upload / extract / library / delete | Phase 1 verified (unit + live Supabase smoke) |
+| Deterministic quote verifier + unit tests | Verified (unit); chat integration later |
+| Requirements matrix & governance docs | Present |
+| Retrieval / coverage honesty for 150 pages | Phase 2 (ingestion of synthetic 150-page PDF verified) |
 | AI chat / streaming / cancel / history | Not started |
 | Citation highlighting in viewer | Not started |
 | Multi-doc Q&A / comparison / Part C | Not started |
 | Deployed demo / video / written note | Not started |
 
+## Phase 1 checks
+
+```powershell
+npm run typecheck
+npm test
+npm run build
+# with app running and .env.local configured:
+node --env-file=.env.local scripts/phase1-live-smoke.mjs
+```
+
 ## Next milestones
 
-1. Supabase live smoke tests (PDF, DOCX, scanned empty PDF).
+1. Phase 2 — source-aware retrieval and honest absence/coverage behaviour.
 2. Streaming LLM chat, persisted messages, cancellation retaining partial content.
-3. Retrieval against `document_chunks` with coverage/abstention for ~150-page contracts.
-4. Citation highlighting; multi-doc QA; comparison; Part C Option 2.
-5. Deployment, screenshots, demo video, technical note.
+3. Citation highlighting; multi-doc QA; comparison; Part C Option 2.
+4. Deployment, screenshots, demo video, technical note.
 
 ## Security
 
