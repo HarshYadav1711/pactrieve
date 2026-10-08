@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 2 retrieval implemented (verify locally; commit manually).** Phase 1 ingestion remains verified. Phase 2 adds structure-aware chunking and phrase-safe document retrieval with honest coverage statuses (no LLM). AI chat, streaming/cancellation, PDF page-overlay highlights, multi-document Q&A, comparison, and agentic tools are **not implemented**. Do not claim otherwise.
+> **Status: Phase 3 grounded streaming chat implemented (verify locally; commit manually).** Phases 0–2 remain in place. Phase 3 adds single-document AI chat with retrieval-grounded prompts, real SSE token streaming, and independently verified citations. Stop/partial persistence and durable chat history are **Phase 4**. PDF page-overlay highlighting, multi-document Q&A, comparison, and agentic tools are **not implemented**. Live LLM checks require `LLM_*` credentials (currently BLOCKED if unset).
 
 ## Technology
 
@@ -60,7 +60,10 @@ Open http://localhost:3000 .
 | `SUPABASE_URL` | Server project URL (can match public URL) |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only database/storage access. Never expose. |
 | `SUPABASE_STORAGE_BUCKET` | Defaults to `pactrieve-documents` |
-| `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` | Reserved for later phases; not used yet |
+| `LLM_API_KEY` | Server-only API key for an OpenAI-compatible chat provider |
+| `LLM_BASE_URL` | Provider base URL (e.g. `https://api.groq.com/openai/v1`) — no trailing slash required |
+| `LLM_MODEL` | Model id supported by that provider |
+| `LLM_TIMEOUT_MS`, `LLM_MAX_TOKENS` | Optional (defaults 45000 ms / 1024 tokens) |
 
 The browser uploads via a short-lived signed token from a server route; raw files go to private Storage. After upload, the process API downloads, validates signatures, extracts text, and stores page/offset mapping and retrieval chunks.
 
@@ -74,7 +77,26 @@ npm test
 npm run build
 ```
 
-Unit tests need no model key or database. They cover monetary hallucinations, precise words, whitespace normalization, cross-page quotes, repeated quotes, wrong-document scoping, unicode offsets, empty quotes, chunking, and PDF text reconstruction.
+Unit tests need no model key or database. They cover monetary hallucinations, precise words, whitespace normalization, cross-page quotes, repeated quotes, wrong-document scoping, unicode offsets, empty quotes, chunking, PDF text reconstruction, grounded chat streaming, invented evidence IDs, and insufficient-evidence abstention.
+
+## Grounded chat (Phase 3)
+
+Pipeline for a ready document:
+
+1. Validate question (1–2000 chars) and document readiness.
+2. Retrieve relevant passages via `retrieveDocument` (not the full contract).
+3. Build a **verified evidence registry** (`e1`…) with `verifyQuote` on canonical text.
+4. Stream an OpenAI-compatible completion that may cite evidence IDs only.
+5. Resolve citations against the registry; reject invented IDs / wrong-document refs.
+6. Emit SSE events: `retrieval_started` → `evidence_prepared` → `generation_started` → `answer_delta*` → `citation*` → `completed` | `error`.
+
+If retrieval coverage cannot support an answer, the API abstains with an explicit insufficient-evidence message (a search miss is **not** proof of absence).
+
+Configure `LLM_*` in `.env.local`, then optionally:
+
+```powershell
+node --env-file=.env.local --experimental-strip-types scripts/phase3-live-chat.mjs
+```
 
 ## Evidence engine guarantees
 
@@ -97,6 +119,7 @@ Unit tests need no model key or database. They cover monetary hallucinations, pr
 | `POST` | `/api/documents/:id/process` | Downloads, validates and extracts uploaded file |
 | `GET` | `/api/documents/:id/text` | Canonical extracted text and page boundaries |
 | `POST` | `/api/documents/:id/verify` | Deterministically checks a proposed quotation |
+| `POST` | `/api/documents/:id/chat` | Grounded SSE chat stream for one ready document |
 | `GET` | `/api/documents/:id/file` | Short-lived signed original-file URL |
 | `DELETE` | `/api/documents/:id` | Removes file and DB record (child rows cascade) |
 
@@ -105,11 +128,11 @@ Unit tests need no model key or database. They cover monetary hallucinations, pr
 | Area | Status |
 | --- | --- |
 | Document upload / extract / library / delete | Phase 1 verified (unit + live Supabase smoke) |
-| Deterministic quote verifier + unit tests | Verified (unit); chat integration later |
-| Structure-aware retrieval + coverage statuses | Phase 2 implemented (47 unit tests; live retrieval smoke) |
-| Requirements matrix & governance docs | Present |
-| AI chat / streaming / cancel / history | Not started |
-| Citation highlighting in viewer | Not started |
+| Deterministic quote verifier + unit tests | Verified |
+| Structure-aware retrieval + coverage statuses | Phase 2 verified (unit + live retrieval smoke) |
+| Grounded single-document chat + real SSE streaming | Phase 3 implemented (70 unit tests; live LLM BLOCKED without credentials) |
+| Stop generation / durable chat history | Not started (Phase 4) |
+| Citation highlighting in viewer | Not started (extracted-text scroll works from chat citations) |
 | Multi-doc Q&A / comparison / Part C | Not started |
 | Deployed demo / video / written note | Not started |
 
@@ -123,19 +146,24 @@ npm run build
 node --env-file=.env.local scripts/phase1-live-smoke.mjs
 # Phase 2 live retrieval (no app required):
 node --env-file=.env.local --experimental-strip-types scripts/phase2-live-retrieval.mjs
+# Phase 3 live chat (requires LLM_*):
+node --env-file=.env.local --experimental-strip-types scripts/phase3-live-chat.mjs
 ```
 
 Optional Postgres FTS helper: run `db/migrations/20261008_phase2_search_helper.sql` in the Supabase SQL editor.
 
 ## Next milestones
 
-1. Commit Phase 2 after review (`feat: implement source-aware document retrieval`).
-2. Phase 3 — streaming grounded chat using `retrieveDocument` + `verifyQuote`.
-3. Citation highlighting; multi-doc QA; comparison; Part C Option 2.
-4. Deployment, screenshots, demo video, technical note.
+1. Commit Phase 3 after review (`feat: add grounded streaming document chat`).
+2. Configure a live LLM provider and re-run `scripts/phase3-live-chat.mjs`.
+3. Phase 4 — Stop control, partial persistence, conversation history.
+4. Citation highlighting; multi-doc QA; comparison; Part C Option 2.
+5. Deployment, screenshots, demo video, technical note.
 
 ## Security
 
 - Never store API keys in Git (`.env*` ignored except `.env.example`).
+- `LLM_*` and Supabase service role stay server-side only.
 - Private Storage for originals; HTTP routes have no auth by assignment design.
-- Magic signatures checked after upload; production hardening (ZIP bombs, malware, rate limits, durable retries) still required.
+- Contract text is untrusted data (prompt-injection delimiters); magic signatures checked after upload.
+- Production hardening (ZIP bombs, malware, rate limits, durable retries) still required.

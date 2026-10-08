@@ -1,5 +1,17 @@
 # Engineering decisions
 
+## 2026-10-08 — Phase 3 grounded streaming chat
+
+- **Decision:** OpenAI-compatible `/chat/completions` over native `fetch` (no LLM SDK). Configure with `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` only on the server.
+- **Decision:** Build a **verified evidence registry** from retrieved passages *before* generation. Assign stable request-scoped IDs (`e1`…). Model may cite IDs only; positions always come from registry + `verifyQuote`.
+- **Decision:** Stream via SSE over `POST /api/documents/:id/chat`. Answer deltas are provisional; citation events fire only after post-generation registry resolution.
+- **Decision:** When coverage is not generable (`NO_MATCH_ESTABLISHED`, `SEARCH_LIMITED`, empty registry, etc.), abstain without calling the provider. Never claim absence from a retrieval miss.
+- **Decision:** Prefer higher-scoring / phrase-literal passages when filling the prompt char budget (expansion returns document order).
+- **Decision:** No durable chat persistence or Stop-and-save in Phase 3 (reserved for Phase 4). UI keeps ephemeral thread state only.
+- **Decision:** No new npm dependencies.
+- **Decision:** Phase 3 left **uncommitted** for manual user review.
+- **Observation:** Live LLM verification **BLOCKED** — `.env.local` has empty `LLM_*` values. Deterministic fake-provider tests cover streaming/citation behaviour.
+
 ## 2026-10-08 — Phase 2 structure-aware retrieval
 
 - **Decision:** No schema-breaking migration. Reuse `document_chunks` + existing `search_vector` GIN. Optional additive SQL function `pactrieve_search_chunks` for FTS candidate discovery; application falls back safely if absent.
