@@ -1,5 +1,16 @@
 # Engineering decisions
 
+## 2026-10-08 — Phase 4 persistent chat and cancellation
+
+- **Decision:** Reuse existing `conversations` / `conversation_documents` / `messages` / `citations` tables with an **additive** migration (`pending`/`interrupted` statuses, `cancel_requested`, `updated_at`, optional `citations.section_label`).
+- **Decision:** Map Phase 3 answer outcomes to DB statuses: `answered`/`insufficient_evidence` → `complete`; user Stop → `stopped`; provider failure → `failed`; client disconnect mid-stream → `interrupted`.
+- **Decision:** Cancellation is **DB-authoritative** (`messages.cancel_requested`) polled by the durable chat loop, which also aborts the provider `AbortSignal`. No Redis/workers.
+- **Decision:** Checkpoint assistant content ~every 400 characters or 800 ms while `streaming`. Flush before Stop/failure finalization.
+- **Decision:** Terminal transitions are idempotent; a late `complete` cannot overwrite `stopped`.
+- **Decision:** On Stop, resolve citations only against accepted partial text; incomplete markers are not verified.
+- **Decision:** Phase 4 left **uncommitted** for manual user review.
+- **Limitation:** Tokens after the last checkpoint may be lost on hard process death before finalization.
+
 ## 2026-10-08 — Phase 3 grounded streaming chat
 
 - **Decision:** OpenAI-compatible `/chat/completions` over native `fetch` (no LLM SDK). Configure with `LLM_API_KEY`, `LLM_BASE_URL`, `LLM_MODEL` only on the server.

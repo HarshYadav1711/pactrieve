@@ -9,7 +9,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-strip-types --test tests/*.test.mts",
-    "test:phase3-live": "node --experimental-strip-types scripts/phase3-live-chat.mjs"
+    "test:phase3-live": "node --experimental-strip-types scripts/phase3-live-chat.mjs",
+    "test:phase4-live": "node --experimental-strip-types scripts/phase4-live-chat.mjs"
   },
   "engines": {
     "node": ">=22.16.0"

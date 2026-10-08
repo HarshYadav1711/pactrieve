@@ -41,7 +41,7 @@ create table if not exists public.document_chunks (
 create index if not exists document_chunks_fts_idx on public.document_chunks using gin(search_vector);
 create index if not exists document_chunks_doc_idx on public.document_chunks(document_id);
 
--- Reserved for the next implementation phase. These tables are not yet wired to chat endpoints.
+-- Chat persistence (Phase 4). conversation_documents preserves multi-doc association for later phases.
 create table if not exists public.conversations (
   id uuid primary key default gen_random_uuid(),
   created_at timestamptz not null default now(),
@@ -52,14 +52,23 @@ create table if not exists public.conversation_documents (
   document_id uuid not null references public.documents(id) on delete cascade,
   primary key(conversation_id, document_id)
 );
+create index if not exists conversation_documents_document_idx
+  on public.conversation_documents(document_id);
 create table if not exists public.messages (
   id uuid primary key default gen_random_uuid(),
   conversation_id uuid not null references public.conversations(id) on delete cascade,
   role text not null check (role in ('user','assistant')),
   content text not null default '',
-  status text not null default 'complete' check (status in ('streaming','complete','stopped','failed')),
-  created_at timestamptz not null default now()
+  status text not null default 'complete' check (status in ('pending','streaming','complete','stopped','failed','interrupted')),
+  cancel_requested boolean not null default false,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
 );
+create index if not exists messages_conversation_created_idx
+  on public.messages(conversation_id, created_at asc);
+create index if not exists messages_streaming_updated_idx
+  on public.messages(status, updated_at)
+  where status in ('pending','streaming');
 create table if not exists public.citations (
   id uuid primary key default gen_random_uuid(),
   message_id uuid not null references public.messages(id) on delete cascade,
@@ -68,6 +77,7 @@ create table if not exists public.citations (
   source_end integer not null,
   quote text not null,
   occurrence_index integer not null default 0,
+  section_label text,
   created_at timestamptz not null default now()
 );
 

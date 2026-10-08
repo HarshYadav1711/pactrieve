@@ -160,21 +160,65 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
     };
   }
 
+  // User/server cancellation: keep accepted partial text; resolve only complete citation markers.
+  if (providerFailed?.code === "CLIENT_ABORTED") {
+    const resolution = resolveCitations(documentId, source, prepared.items, answerText);
+    const citations = resolution.citations;
+    for (const citation of citations) emit({type: "citation", citation});
+    const result: ChatPipelineResult = {
+      status: "stopped",
+      answerText,
+      citations,
+      coverageStatus: retrieval.coverage.status,
+      rejectedEvidenceIds: resolution.rejectedEvidenceIds,
+      evidenceCount: prepared.items.length,
+      promptChars,
+      truncated: prepared.truncated,
+      replacedProvisional: false
+    };
+    emit({
+      type: "completed",
+      status: result.status,
+      answerText: result.answerText,
+      citations: result.citations,
+      coverageStatus: result.coverageStatus,
+      rejectedEvidenceIds: result.rejectedEvidenceIds,
+      provisional: true,
+      replacedProvisional: false
+    });
+    return result;
+  }
+
   if (providerFailed) {
     emit({type: "error", code: providerFailed.code, message: providerFailed.message});
-    return {
+    // Preserve partial text for durable failed/interrupted finalization by the caller.
+    const result: ChatPipelineResult = {
       status: "failed",
-      answerText: unsupportedAfterGenerationMessage(),
+      answerText: answerText.length
+        ? answerText
+        : unsupportedAfterGenerationMessage(),
       citations: [],
       coverageStatus: retrieval.coverage.status,
       rejectedEvidenceIds: [],
       evidenceCount: prepared.items.length,
       promptChars,
       truncated: prepared.truncated,
-      replacedProvisional: answerText.length > 0,
+      replacedProvisional: false,
       reasonCode: "PROVIDER_FAILED",
       modelDraft: answerText || undefined
     };
+    emit({
+      type: "completed",
+      status: result.status,
+      answerText: result.answerText,
+      citations: [],
+      coverageStatus: result.coverageStatus,
+      rejectedEvidenceIds: [],
+      provisional: true,
+      replacedProvisional: false,
+      reasonCode: "PROVIDER_FAILED"
+    });
+    return result;
   }
 
   const resolution = resolveCitations(documentId, source, prepared.items, answerText);

@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 3 grounded streaming chat implemented (verify locally; commit manually).** Phases 0–2 remain in place. Phase 3 adds single-document AI chat with retrieval-grounded prompts, real SSE token streaming, and independently verified citations. Stop/partial persistence and durable chat history are **Phase 4**. PDF page-overlay highlighting, multi-document Q&A, comparison, and agentic tools are **not implemented**. Live LLM checks require `LLM_*` credentials (currently BLOCKED if unset).
+> **Status: Phase 4 persistent chat + Stop implemented (verify locally; commit manually).** Phases 0–3 remain in place. Phase 4 adds durable conversations/messages/citations, Stop cancellation with partial-answer save, and history reopen after refresh. Apply `db/migrations/20261008_phase4_chat_persistence.sql` in Supabase before live history works. PDF page-overlay highlighting, multi-document Q&A, comparison, and agentic tools are **not implemented**.
 
 ## Technology
 
@@ -121,7 +121,11 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | `POST` | `/api/documents/:id/process` | Downloads, validates and extracts uploaded file |
 | `GET` | `/api/documents/:id/text` | Canonical extracted text and page boundaries |
 | `POST` | `/api/documents/:id/verify` | Deterministically checks a proposed quotation |
-| `POST` | `/api/documents/:id/chat` | Grounded SSE chat stream for one ready document |
+| `POST` | `/api/documents/:id/chat` | Grounded SSE chat stream (persists conversation/messages) |
+| `GET` | `/api/documents/:id/conversations` | List conversations for a document |
+| `POST` | `/api/documents/:id/conversations` | Create a new conversation |
+| `GET` | `/api/documents/:id/conversations/:cid` | Load messages + citations |
+| `POST` | `/api/documents/:id/messages/:mid/stop` | Request Stop (`cancel_requested`) |
 | `GET` | `/api/documents/:id/file` | Short-lived signed original-file URL |
 | `DELETE` | `/api/documents/:id` | Removes file and DB record (child rows cascade) |
 
@@ -132,8 +136,8 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | Document upload / extract / library / delete | Phase 1 verified (unit + live Supabase smoke) |
 | Deterministic quote verifier + unit tests | Verified |
 | Structure-aware retrieval + coverage statuses | Phase 2 verified (unit + live retrieval smoke) |
-| Grounded single-document chat + real SSE streaming | Phase 3 implemented (70 unit tests; live LLM BLOCKED without credentials) |
-| Stop generation / durable chat history | Not started (Phase 4) |
+| Grounded single-document chat + real SSE streaming | Phase 3 verified (unit + live Groq) |
+| Stop generation / durable chat history | Phase 4 implemented (96 unit tests; apply Phase 4 SQL migration for live Supabase) |
 | Citation highlighting in viewer | Not started (extracted-text scroll works from chat citations) |
 | Multi-doc Q&A / comparison / Part C | Not started |
 | Deployed demo / video / written note | Not started |
@@ -150,16 +154,21 @@ node --env-file=.env.local scripts/phase1-live-smoke.mjs
 node --env-file=.env.local --experimental-strip-types scripts/phase2-live-retrieval.mjs
 # Phase 3 live chat (requires LLM_*; loads .env.local automatically):
 node --experimental-strip-types scripts/phase3-live-chat.mjs
+# Phase 4 live persistence/stop smoke:
+node --experimental-strip-types scripts/phase4-live-chat.mjs
 ```
 
-Optional Postgres FTS helper: run `db/migrations/20261008_phase2_search_helper.sql` in the Supabase SQL editor.
+Optional SQL helpers in Supabase:
+
+- `db/migrations/20261008_phase2_search_helper.sql` — FTS candidate helper
+- `db/migrations/20261008_phase4_chat_persistence.sql` — chat status/cancel columns (**required for Phase 4 live history**)
 
 ## Next milestones
 
-1. Commit Phase 3 after review (`feat: add grounded streaming document chat`).
-2. Configure a live LLM provider and re-run `scripts/phase3-live-chat.mjs`.
-3. Phase 4 — Stop control, partial persistence, conversation history.
-4. Citation highlighting; multi-doc QA; comparison; Part C Option 2.
+1. Apply Phase 4 SQL migration; run `npm run test:phase4-live`.
+2. Commit Phase 4 after review (`feat: persist chat sessions and support generation cancellation`).
+3. Phase 5 — PDF citation highlighting.
+4. Multi-doc QA; comparison; Part C Option 2.
 5. Deployment, screenshots, demo video, technical note.
 
 ## Security

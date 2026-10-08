@@ -8,55 +8,47 @@
 
 ## Phase status (2026-10-08)
 
-- **Phase 0:** Complete — foundation bootstrap + governance.
-- **Phase 1:** Complete — ingestion lifecycle verified live.
-- **Phase 2:** Complete (committed `437933c`) — structure-aware retrieval + coverage semantics.
-- **Phase 3:** Implementation + live citation corrective patch in working tree (**uncommitted — user commits manually**). Grounded streaming chat; citation parser accepts `[eN]` and observed Groq `【eN】`; unsupported answers replace provisional streamed claims. Live Groq verification **PASS** (`answered` + ≥1 verified citation).
-- **Phase 4+:** Not started. Do not auto-start.
+- **Phase 0–2:** Complete (committed).
+- **Phase 3:** Complete (committed `1579537` + citation fix `f1c7e85`).
+- **Phase 4:** Implementation complete in working tree (**uncommitted — user commits manually**). Persistent conversations, Stop cancellation, partial-answer recovery.
+- **Phase 5+:** Not started. Do not auto-start.
 
 ## Current implementation
 
 - Document upload/extract/library/delete (Phase 1).
-- Structure-aware chunking + phrase-safe retrieval (Phase 2).
-- **Grounded chat (Phase 3):**
-  - `POST /api/documents/:id/chat` — SSE stream.
-  - OpenAI-compatible provider via `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL`.
-  - Pipeline: validate → `retrieveDocument` → verified evidence registry (`eN`) → stream answer → resolve citations against registry + `verifyQuote`.
-  - Document workspace chat UI with progressive deltas and verified citation cards.
-  - Insufficient-evidence abstention from coverage statuses; no absence claims from top-k misses.
-  - Session messages are in-memory UI state only — durable history / Stop persistence is Phase 4.
+- Structure-aware retrieval (Phase 2).
+- Grounded streaming chat with verified citations (Phase 3).
+- **Persistent chat lifecycle (Phase 4):**
+  - Conversations + messages + citations in Supabase.
+  - Durable assistant rows before generation; checkpoints during streaming.
+  - Stop via `POST /api/documents/:id/messages/:messageId/stop` (`cancel_requested`) + AbortSignal to provider.
+  - Terminal states: `complete` | `stopped` | `failed` | `interrupted` (plus `pending`/`streaming`).
+  - Stale `streaming`/`pending` (>2 min) recovered as `interrupted` on load.
+  - UI: conversation picker, New, Stop, “Stopped · Partial answer saved” after confirmed persistence.
 
-## Code map (Phase 3 additions)
+## Phase 4 code map
 
-- `src/lib/llm/*` — config, OpenAI-compatible streaming client, SSE frame parser, fake provider.
-- `src/lib/chat/*` — evidence registry, prompts, citation resolution, pipeline, SSE event codec.
-- `src/app/api/documents/[id]/chat/route.ts` — chat SSE endpoint.
-- `src/components/DocumentChat.tsx` — streaming chat panel.
-- `tests/chat.test.mts` — deterministic Phase 3 cases (fake provider).
-- `scripts/phase3-live-chat.mjs` — live provider smoke (exits BLOCKED without credentials).
+- `db/migrations/20261008_phase4_chat_persistence.sql` — additive migration.
+- `src/lib/chat/persist/*` — store interface, memory + Supabase, durable orchestrator.
+- `src/app/api/documents/[id]/conversations/**` — list/create/load.
+- `src/app/api/documents/[id]/messages/[messageId]/stop` — cancel request.
+- Extended `POST .../chat` — durable streaming.
+- `tests/persist.test.mts` — persistence/stop races.
+- `scripts/phase4-live-chat.mjs` — live smoke.
 
-## Streaming event contract
+## Durability boundary (honest)
 
-SSE `event` name equals payload `type`:
-
-| Event | Meaning |
-|---|---|
-| `retrieval_started` | Search begun |
-| `evidence_prepared` | Verified registry + coverage + prompt size |
-| `generation_started` | Provider stream begun |
-| `answer_delta` | Incremental answer text |
-| `citation` | Server-verified quotation metadata |
-| `completed` | Terminal status (`answered` / `insufficient_evidence` / `failed`) |
-| `error` | Provider/pipeline failure |
-
-Answer prose during streaming is **provisional**. Verified citation cards are emitted only after registry + `verifyQuote` success.
+- Text acknowledged after a successful Stop finalization is persisted.
+- Checkpoints every ~400 chars or ~800 ms while streaming — a hard crash between checkpoints can lose the newest tokens after the last checkpoint.
+- Browser `AbortController` alone does not save; Stop hits the DB cancel flag and the stream finalizes after flush.
+- In-memory cancel maps are not used as cross-instance authority; `cancel_requested` is DB-backed.
 
 ## Next immediate steps
 
-1. User reviews/commits Phase 3 when satisfied.
-2. Configure `LLM_*` and run `scripts/phase3-live-chat.mjs` for live verification.
-3. Phase 4 — persist conversations, Stop control, partial recovery.
+1. Apply `db/migrations/20261008_phase4_chat_persistence.sql` in Supabase if not already.
+2. User reviews/commits Phase 4.
+3. Phase 5 — PDF citation highlighting.
 
 ## Ground rules
 
-No API secrets in repo, no fictional test results, no trusting model-provided source locations, no automatic phase advance or agent commits for Phase 3.
+No API secrets in repo, no fictional test results, no trusting model-provided source locations, no automatic phase advance or agent commits for Phase 4.

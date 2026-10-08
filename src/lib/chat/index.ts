@@ -19,3 +19,5 @@ export {
   type AnswerStatus,
   type UnsupportedReasonCode
 } from "./types.ts";
+// Persist modules are imported from `@/lib/chat/persist` to avoid pulling Supabase
+// into pure unit-test paths that only need grounding helpers.

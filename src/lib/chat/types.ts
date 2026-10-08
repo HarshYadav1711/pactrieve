@@ -2,7 +2,8 @@ import {z} from "zod";
 import type {CoverageStatus, RetrievalCoverage} from "../retrieval/types.ts";
 
 export const chatQuestionSchema = z.object({
-  question: z.string().trim().min(1, "Question cannot be empty.").max(2000, "Question exceeds 2,000 characters.")
+  question: z.string().trim().min(1, "Question cannot be empty.").max(2000, "Question exceeds 2,000 characters."),
+  conversationId: z.string().uuid().optional()
 });
 
 export type ChatQuestionInput = z.infer<typeof chatQuestionSchema>;
@@ -34,7 +35,8 @@ export interface VerifiedCitation {
 export type AnswerStatus =
   | "answered"
   | "insufficient_evidence"
-  | "failed";
+  | "failed"
+  | "stopped";
 
 /** Machine-readable reason for engineering diagnostics (not end-user prose). */
 export type UnsupportedReasonCode =
@@ -46,13 +48,19 @@ export type UnsupportedReasonCode =
 export type ChatStreamEvent =
   | {type: "retrieval_started"; documentId: string; question: string}
   | {
+      type: "session";
+      conversationId: string;
+      userMessageId: string;
+      assistantMessageId: string;
+    }
+  | {
       type: "evidence_prepared";
       evidence: EvidenceItem[];
       coverage: RetrievalCoverage;
       truncated: boolean;
       promptChars: number;
     }
-  | {type: "generation_started"}
+  | {type: "generation_started"; assistantMessageId?: string}
   | {type: "answer_delta"; text: string}
   | {type: "citation"; citation: VerifiedCitation}
   | {
@@ -66,6 +74,10 @@ export type ChatStreamEvent =
       /** True when streamed provisional answer text was replaced by the final verified/insufficient payload. */
       replacedProvisional: boolean;
       reasonCode?: UnsupportedReasonCode;
+      conversationId?: string;
+      assistantMessageId?: string;
+      persistedStatus?: "complete" | "stopped" | "failed" | "interrupted";
+      persistenceOk?: boolean;
     }
   | {type: "error"; code: string; message: string};
 
