@@ -95,8 +95,10 @@ If retrieval coverage cannot support an answer, the API abstains with an explici
 Configure `LLM_*` in `.env.local`, then optionally:
 
 ```powershell
-node --env-file=.env.local --experimental-strip-types scripts/phase3-live-chat.mjs
+node --experimental-strip-types scripts/phase3-live-chat.mjs
 ```
+
+The script loads `.env.local` from the repo root via Node's built-in `process.loadEnvFile` (existing process env vars are preserved for CI/deploy).
 
 ## Evidence engine guarantees
 
@@ -146,8 +148,8 @@ npm run build
 node --env-file=.env.local scripts/phase1-live-smoke.mjs
 # Phase 2 live retrieval (no app required):
 node --env-file=.env.local --experimental-strip-types scripts/phase2-live-retrieval.mjs
-# Phase 3 live chat (requires LLM_*):
-node --env-file=.env.local --experimental-strip-types scripts/phase3-live-chat.mjs
+# Phase 3 live chat (requires LLM_*; loads .env.local automatically):
+node --experimental-strip-types scripts/phase3-live-chat.mjs
 ```
 
 Optional Postgres FTS helper: run `db/migrations/20261008_phase2_search_helper.sql` in the Supabase SQL editor.

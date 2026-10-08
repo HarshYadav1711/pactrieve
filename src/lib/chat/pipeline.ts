@@ -3,8 +3,17 @@ import type {LlmProvider} from "../llm/types.ts";
 import type {RetrievalRequest, RetrievalResult} from "../retrieval/types.ts";
 import {resolveCitations, findLiteralQuotedEvidence} from "./citations.ts";
 import {prepareEvidenceRegistry} from "./evidence.ts";
-import {buildChatMessages, insufficientEvidenceMessage} from "./prompts.ts";
-import type {ChatPipelineResult, ChatStreamEvent, VerifiedCitation} from "./types.ts";
+import {
+  buildChatMessages,
+  insufficientEvidenceMessage,
+  unsupportedAfterGenerationMessage
+} from "./prompts.ts";
+import type {
+  ChatPipelineResult,
+  ChatStreamEvent,
+  UnsupportedReasonCode,
+  VerifiedCitation
+} from "./types.ts";
 
 export interface DocumentMeta {
   id: string;
@@ -60,7 +69,9 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
       rejectedEvidenceIds: [],
       evidenceCount: 0,
       promptChars: 0,
-      truncated: false
+      truncated: false,
+      replacedProvisional: false,
+      reasonCode: "PROVIDER_FAILED"
     };
   }
 
@@ -100,7 +111,9 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
       rejectedEvidenceIds: [],
       evidenceCount: prepared.items.length,
       promptChars,
-      truncated: prepared.truncated
+      truncated: prepared.truncated,
+      replacedProvisional: false,
+      reasonCode: "RETRIEVAL_INSUFFICIENT"
     };
     emit({
       type: "completed",
@@ -109,14 +122,11 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
       citations: [],
       coverageStatus: retrieval.coverage.status,
       rejectedEvidenceIds: [],
-      provisional: false
+      provisional: false,
+      replacedProvisional: false,
+      reasonCode: "RETRIEVAL_INSUFFICIENT"
     });
     return completed;
-  }
-
-  // PARTIAL_SOURCE with matches: disclose limitation before generation.
-  if (retrieval.coverage.status === "PARTIAL_SOURCE" || retrieval.coverage.unreadablePageCount > 0) {
-    // Limitation is also in the prompt; surface a status via evidence_prepared coverage.
   }
 
   emit({type: "generation_started"});
@@ -154,20 +164,23 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
     emit({type: "error", code: providerFailed.code, message: providerFailed.message});
     return {
       status: "failed",
-      answerText,
+      answerText: unsupportedAfterGenerationMessage(),
       citations: [],
       coverageStatus: retrieval.coverage.status,
       rejectedEvidenceIds: [],
       evidenceCount: prepared.items.length,
       promptChars,
-      truncated: prepared.truncated
+      truncated: prepared.truncated,
+      replacedProvisional: answerText.length > 0,
+      reasonCode: "PROVIDER_FAILED",
+      modelDraft: answerText || undefined
     };
   }
 
   const resolution = resolveCitations(documentId, source, prepared.items, answerText);
   let citations: VerifiedCitation[] = resolution.citations;
 
-  // If the model answered without [eN] markers but literally quoted evidence, accept those.
+  // If the model answered without ID markers but literally quoted evidence, accept those.
   if (!citations.length) {
     citations = findLiteralQuotedEvidence(documentId, source, prepared.items, answerText);
   }
@@ -176,7 +189,6 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
     emit({type: "citation", citation});
   }
 
-  // Unsupported fabricated citations → do not present as a fully verified answer.
   const looksLikeAbstention = /insufficient evidence|cannot be established|not established|retrieved material/i.test(
     answerText
   );
@@ -184,26 +196,29 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
   let status: ChatPipelineResult["status"] = "answered";
   let finalText = answerText;
   let finalCitations = citations;
+  let replacedProvisional = false;
+  let reasonCode: UnsupportedReasonCode | undefined;
+  let modelDraft: string | undefined;
 
-  if (resolution.hasUnsupportedCitations) {
-    // Strip trust from unsupported refs: keep verified citations only; mark answer provisional via status.
-    if (!citations.length && !looksLikeAbstention) {
-      status = "insufficient_evidence";
-      finalText =
-        answerText.trim() +
-        "\n\n[Verification] One or more cited evidence IDs were not in the verified registry and were rejected. " +
-        "The answer cannot be treated as fully source-supported.";
-      finalCitations = [];
-    }
-  }
-
-  // Model produced prose with zero attached evidence and no abstention language.
-  if (status === "answered" && !finalCitations.length && !looksLikeAbstention) {
+  const withdrawUnsupported = (code: UnsupportedReasonCode) => {
     status = "insufficient_evidence";
-    finalText =
-      answerText.trim() +
-      "\n\n[Verification] No verified supporting quotations were established for this answer. " +
-      "Treat the response as unsupported.";
+    modelDraft = answerText;
+    finalText = unsupportedAfterGenerationMessage();
+    finalCitations = [];
+    replacedProvisional = answerText.length > 0;
+    reasonCode = code;
+  };
+
+  if (resolution.hasUnsupportedCitations && !citations.length && !looksLikeAbstention) {
+    withdrawUnsupported("REJECTED_EVIDENCE_IDS");
+  } else if (status === "answered" && !finalCitations.length && !looksLikeAbstention) {
+    withdrawUnsupported("NO_VERIFIED_CITATIONS");
+  } else if (looksLikeAbstention && !finalCitations.length) {
+    status = "insufficient_evidence";
+    reasonCode = "NO_VERIFIED_CITATIONS";
+    // Model already abstained in prose — keep that abstention text (not a factual claim).
+    finalText = answerText.trim() || unsupportedAfterGenerationMessage();
+    finalCitations = [];
   }
 
   const result: ChatPipelineResult = {
@@ -214,7 +229,10 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
     rejectedEvidenceIds: resolution.rejectedEvidenceIds,
     evidenceCount: prepared.items.length,
     promptChars,
-    truncated: prepared.truncated
+    truncated: prepared.truncated,
+    replacedProvisional,
+    reasonCode,
+    modelDraft
   };
 
   emit({
@@ -224,7 +242,9 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
     citations: result.citations,
     coverageStatus: result.coverageStatus,
     rejectedEvidenceIds: result.rejectedEvidenceIds,
-    provisional: result.status !== "answered" || result.rejectedEvidenceIds.length > 0
+    provisional: result.status !== "answered" || result.rejectedEvidenceIds.length > 0,
+    replacedProvisional: result.replacedProvisional,
+    reasonCode: result.reasonCode
   });
 
   return result;

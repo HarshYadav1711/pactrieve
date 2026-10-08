@@ -20,6 +20,8 @@ type ChatMessage = {
   error?: string;
   truncated?: boolean;
   provisional?: boolean;
+  replacedProvisional?: boolean;
+  reasonCode?: string;
 };
 
 type Props = {
@@ -197,11 +199,14 @@ export default function DocumentChat({documentId, documentName, onInspectCitatio
         updateAssistant(assistantId, m => ({
           ...m,
           stage: "done",
-          text: event.answerText || m.text,
-          citations: event.citations.length ? event.citations : m.citations,
+          // Always take the server final payload — may replace provisional streamed claims.
+          text: event.answerText,
+          citations: event.citations,
           answerStatus: event.status,
           rejectedEvidenceIds: event.rejectedEvidenceIds,
           provisional: event.provisional,
+          replacedProvisional: event.replacedProvisional,
+          reasonCode: event.reasonCode,
           coverageStatus: event.coverageStatus
         }));
         break;
@@ -240,7 +245,10 @@ export default function DocumentChat({documentId, documentName, onInspectCitatio
           </div>
         )}
         {messages.map(msg => (
-          <article key={msg.id} className={`chat-message ${msg.role}`}>
+          <article
+            key={msg.id}
+            className={`chat-message ${msg.role}${msg.answerStatus === "insufficient_evidence" ? " unsupported" : ""}${msg.answerStatus === "answered" ? " grounded" : ""}`}
+          >
             <header>
               <span className="chat-role">{msg.role === "user" ? "You" : "Pactrieve"}</span>
               {msg.role === "assistant" && msg.answerStatus && (
@@ -254,7 +262,14 @@ export default function DocumentChat({documentId, documentName, onInspectCitatio
                 <span className="chat-status-chip pending">{stageLabelFor(msg.stage)}</span>
               )}
             </header>
-            <div className="chat-body">{formatAnswer(msg.text)}</div>
+            {msg.replacedProvisional && msg.answerStatus === "insufficient_evidence" && (
+              <div className="chat-withdrawn" role="status">
+                Provisional streamed text was withdrawn — no verified supporting quotation was established.
+              </div>
+            )}
+            <div className={`chat-body${msg.answerStatus === "insufficient_evidence" ? " insufficient" : ""}`}>
+              {formatAnswer(msg.text)}
+            </div>
             {msg.error && msg.stage === "error" && (
               <div className="chat-error" role="alert">{msg.error}</div>
             )}
@@ -262,10 +277,10 @@ export default function DocumentChat({documentId, documentName, onInspectCitatio
               <div className="chat-meta">
                 Coverage: <code>{msg.coverageStatus}</code>
                 {msg.truncated ? " · evidence truncated for prompt budget" : ""}
-                {msg.provisional ? " · provisional / not fully verified" : ""}
+                {msg.answerStatus === "answered" ? "" : msg.provisional ? " · not fully verified" : ""}
               </div>
             )}
-            {msg.citations.length > 0 && (
+            {msg.answerStatus === "answered" && msg.citations.length > 0 && (
               <ul className="citation-list">
                 {msg.citations.map(citation => (
                   <li key={citation.evidenceId}>
@@ -344,10 +359,9 @@ function formatAnswer(text: string) {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;");
-  const withCitations = escaped.replace(
-    /\[(e\d+)\]/g,
-    '<span class="inline-evidence-ref">[$1]</span>'
-  );
+  const withCitations = escaped
+    .replace(/\[(e\d+)\]/g, '<span class="inline-evidence-ref">[$1]</span>')
+    .replace(/\u3010(e\d+)\u3011/g, '<span class="inline-evidence-ref">[$1]</span>');
   const paragraphs = withCitations.split(/\n{2,}/).map((para, i) => (
     <p key={i} dangerouslySetInnerHTML={{__html: para.replace(/\n/g, "<br/>")}} />
   ));

@@ -4,12 +4,12 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail: `do
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-Evidence gates for this update (2026-10-08 Phase 3 — local working tree, **not yet user-committed**):
+Evidence gates for this update (2026-10-08 Phase 3 corrective patch — local working tree, **not yet user-committed**):
 
 - `npm run typecheck` — pass
-- `npm test` — **70/70** pass (47 prior + 23 Phase 3 chat/SSE cases)
+- `npm test` — **83/83** pass
 - `npm run build` — pass (includes `/api/documents/[id]/chat`)
-- Live LLM (`scripts/phase3-live-chat.mjs`) — **BLOCKED** (LLM_API_KEY / LLM_BASE_URL / LLM_MODEL unset)
+- Live LLM (`scripts/phase3-live-chat.mjs` / Groq `openai/gpt-oss-20b`) — **PASS**: status `answered`, 19 deltas, 1 verified citation, insufficient-evidence probe OK
 - Fake-provider long-doc measurements (150-page fixture, ~284,819 chars): retrieval 2–8 ms; TTFT ~80–144 ms; promptChars ~5.5–7.6k (≪ full document); evidence 3–4 passages
 
 | ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
@@ -19,8 +19,8 @@ Evidence gates for this update (2026-10-08 Phase 3 — local working tree, **not
 | A3 | Processing status UX | VERIFIED | page, process | Phase 1 | — | 1 |
 | A4 | Scanned / no-text PDF handling | VERIFIED | extract, process | Phase 1 | OCR not supported | 1 |
 | A5 | Document library | VERIFIED | page, APIs | Phase 1 | — | 1 |
-| A6 | Document chat Q&A | IMPLEMENTED_UNVERIFIED | chat pipeline, DocumentChat, chat route | chat.test.mts | Live provider BLOCKED without LLM_* | 3 |
-| A7 | Streaming responses | IMPLEMENTED_UNVERIFIED | openai-compatible, SSE, DocumentChat | chat tests (fragmented SSE, multi-delta) | Live multi-delta stream BLOCKED pending credentials | 3 |
+| A6 | Document chat Q&A | VERIFIED | chat pipeline, DocumentChat, chat route | chat.test.mts + live Groq | Unicode `【eN】` + ASCII `[eN]`; unsupported answers replace provisional text | 3 |
+| A7 | Streaming responses | VERIFIED | openai-compatible, SSE, DocumentChat | chat + live Groq (19 deltas) | Live streaming confirmed | 3 |
 | A8 | Stop generation; keep partial | NOT_STARTED | — | — | Phase 4 | 4 |
 | A9 | Per-document chat history | NOT_STARTED | — | — | Phase 4; schema tables reserved | 4 |
 | A10 | Verified quotes | VERIFIED | verify.ts + chat citations | evidence + chat | Chat wires registry; literal match ≠ entailment | 0–3 |

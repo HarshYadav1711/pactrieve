@@ -10,7 +10,8 @@
 - **Decision:** No durable chat persistence or Stop-and-save in Phase 3 (reserved for Phase 4). UI keeps ephemeral thread state only.
 - **Decision:** No new npm dependencies.
 - **Decision:** Phase 3 left **uncommitted** for manual user review.
-- **Observation:** Live LLM verification **BLOCKED** — `.env.local` has empty `LLM_*` values. Deterministic fake-provider tests cover streaming/citation behaviour.
+- **Corrective (live Groq):** Parse CJK corner-bracket citations `【eN】` in addition to canonical `[eN]` (observed from `openai/gpt-oss-20b`). When no verified citations remain, **replace** provisional streamed prose with an explicit insufficient-evidence message (`replacedProvisional`) instead of appending a warning under an unsupported claim.
+- **Observation:** Live Groq verification PASS after corrective patch (streaming + grounded citation + abstention probes).
 
 ## 2026-10-08 — Phase 2 structure-aware retrieval
 

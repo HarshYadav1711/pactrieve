@@ -130,7 +130,11 @@ test("3. invented evidence ID is rejected", async () => {
   );
   assert.ok(result.rejectedEvidenceIds.includes("e99"));
   assert.equal(result.citations.some(c => c.evidenceId === "e99"), false);
-  assert.notEqual(result.status, "answered");
+  assert.equal(result.status, "insufficient_evidence");
+  assert.equal(result.replacedProvisional, true);
+  assert.equal(result.reasonCode, "REJECTED_EVIDENCE_IDS");
+  assert.ok(/withdrawn|could not be linked/i.test(result.answerText));
+  assert.equal(/Liability is capped/i.test(result.answerText), false);
 });
 
 test("4. fake quotation is never marked verified", () => {
@@ -506,4 +510,204 @@ test("SSE encode/parse round-trip without duplicate frames", () => {
 
 test("extractReferencedEvidenceIds finds bracket forms only once", () => {
   assert.deepEqual(extractReferencedEvidenceIds("See [e1] and [e1] plus (e2)."), ["e1", "e2"]);
+});
+
+// --- Phase 3 corrective patch: citation markup + unsupported finalization ---
+
+test("patch1. ASCII citation marker [e1] resolves", () => {
+  assert.deepEqual(extractReferencedEvidenceIds("Cap is AED 100,000 [e1]."), ["e1"]);
+});
+
+test("patch2. Unicode corner-bracket marker 【e1】 resolves", () => {
+  assert.deepEqual(extractReferencedEvidenceIds("Cap is AED 100,000【e1】."), ["e1"]);
+  assert.deepEqual(
+    extractReferencedEvidenceIds("The contract limits liability to **AED 100,000**【e1】."),
+    ["e1"]
+  );
+});
+
+test("patch3. citation immediately after bold Markdown", () => {
+  assert.deepEqual(extractReferencedEvidenceIds("limit is **AED 100,000**[e2]"), ["e2"]);
+  assert.deepEqual(extractReferencedEvidenceIds("limit is **AED 100,000**【e2】"), ["e2"]);
+});
+
+test("patch4. Unicode whitespace around amounts does not block ID extraction", () => {
+  // Narrow no-break space (U+202F) as seen in Groq output around amounts.
+  const text = "liability to **AED\u202F100,000**【e1】.";
+  assert.deepEqual(extractReferencedEvidenceIds(text), ["e1"]);
+});
+
+test("patch5+6. multiple and duplicate verified citations", async () => {
+  const doc = buildDoc();
+  const provider = createFakeProvider({
+    mode: "stream",
+    chunks: ["Liability is capped at AED 100,000. [e1] See also [e1] and [e2]."]
+  });
+  const {result} = await collectEvents(emit =>
+    runGroundedChat({
+      documentId: DOC_A,
+      question: "AED 100,000 aggregate liability",
+      document: {id: DOC_A, name: "c.txt", status: "ready"},
+      source: doc.source,
+      retrieve: async req => searchMemoryDocument(doc, req.query, {limit: 8, expand: true}),
+      provider,
+      emit
+    })
+  );
+  assert.equal(result.status, "answered");
+  assert.ok(result.citations.length >= 1);
+  const ids = result.citations.map(c => c.evidenceId);
+  assert.equal(new Set(ids).size, ids.length, "duplicates collapsed");
+});
+
+test("patch7. unknown evidence ID rejected", () => {
+  const doc = buildDoc();
+  const retrieval = searchMemoryDocument(doc, "AED 100,000");
+  const prepared = prepareEvidenceRegistry(DOC_A, doc.source, retrieval);
+  const resolution = resolveCitations(DOC_A, doc.source, prepared.items, "See [e404].");
+  assert.deepEqual(resolution.rejectedEvidenceIds, ["e404"]);
+  assert.equal(resolution.citations.length, 0);
+});
+
+test("patch8. malformed evidence IDs are not parsed", () => {
+  // [evidence1], [e], 【ex】 are not valid e+digits markers.
+  assert.deepEqual(extractReferencedEvidenceIds("See [evidence1] and [e] and 【ex】."), []);
+  // Case-insensitive [E1] normalizes to e1 (still a valid id shape).
+  assert.deepEqual(extractReferencedEvidenceIds("ok [E1]"), ["e1"]);
+  assert.deepEqual(extractReferencedEvidenceIds("bad [e01x] and ok [e2]"), ["e2"]);
+});
+
+test("patch9. wrong-document citation rejected (pipeline)", async () => {
+  const docA = buildDoc(contractText, DOC_A);
+  const docB = buildDoc(contractText, DOC_B);
+  const retrievalA = searchMemoryDocument(docA, "AED 100,000 aggregate liability");
+  const preparedA = prepareEvidenceRegistry(DOC_A, docA.source, retrievalA);
+  assert.ok(preparedA.items.length > 0);
+  // Feed registry belonging to A while claiming document B.
+  const resolution = resolveCitations(DOC_B, docB.source, preparedA.items, "Cap【e1】");
+  assert.ok(resolution.rejectedEvidenceIds.includes("e1"));
+  assert.equal(resolution.citations.length, 0);
+});
+
+test("patch10. model answer with no citations → unsupported finalization", async () => {
+  const doc = buildDoc();
+  const {result, events} = await collectEvents(emit =>
+    runGroundedChat({
+      documentId: DOC_A,
+      question: "AED 100,000 aggregate liability",
+      document: {id: DOC_A, name: "c.txt", status: "ready"},
+      source: doc.source,
+      retrieve: async req => searchMemoryDocument(doc, req.query, {limit: 8, expand: true}),
+      provider: createFakeProvider({
+        mode: "stream",
+        chunks: ["The Supplier liability is AED 100,000 without any evidence marker."]
+      }),
+      emit
+    })
+  );
+  assert.equal(result.status, "insufficient_evidence");
+  assert.equal(result.replacedProvisional, true);
+  assert.equal(result.reasonCode, "NO_VERIFIED_CITATIONS");
+  assert.equal(/Supplier liability is AED/i.test(result.answerText), false);
+  assert.ok(/withdrawn|could not be linked/i.test(result.answerText));
+  const completed = events.find(e => e.type === "completed");
+  assert.ok(completed && completed.type === "completed");
+  assert.equal(completed.replacedProvisional, true);
+  assert.equal(completed.citations.length, 0);
+});
+
+test("patch11. only invented citations → unsupported finalization", async () => {
+  const doc = buildDoc();
+  const {result} = await collectEvents(emit =>
+    runGroundedChat({
+      documentId: DOC_A,
+      question: "AED 100,000 aggregate liability",
+      document: {id: DOC_A, name: "c.txt", status: "ready"},
+      source: doc.source,
+      retrieve: async req => searchMemoryDocument(doc, req.query, {limit: 8, expand: true}),
+      provider: createFakeProvider({
+        mode: "stream",
+        chunks: ["Secret clause wins.【e99】"]
+      }),
+      emit
+    })
+  );
+  assert.equal(result.status, "insufficient_evidence");
+  assert.deepEqual(result.rejectedEvidenceIds, ["e99"]);
+  assert.equal(result.citations.length, 0);
+  assert.equal(/Secret clause wins/i.test(result.answerText), false);
+});
+
+test("patch12+13. unsupported finalization replaces provisional streamed content", async () => {
+  const doc = buildDoc();
+  const collected = await collectEvents(emit =>
+    runGroundedChat({
+      documentId: DOC_A,
+      question: "AED 100,000 aggregate liability",
+      document: {id: DOC_A, name: "c.txt", status: "ready"},
+      source: doc.source,
+      retrieve: async req => searchMemoryDocument(doc, req.query, {limit: 8, expand: true}),
+      provider: createFakeProvider({
+        mode: "stream",
+        chunks: ["Provisional claim about liability. ", "Still no cite."]
+      }),
+      emit
+    })
+  );
+  const streamed = collected.events.filter(e => e.type === "answer_delta").map(e => (e as {text: string}).text).join("");
+  assert.ok(/Provisional claim/i.test(streamed));
+  assert.equal(collected.result.status, "insufficient_evidence");
+  assert.equal(collected.result.replacedProvisional, true);
+  assert.equal(/Provisional claim/i.test(collected.result.answerText), false);
+  const completed = collected.events.find(e => e.type === "completed");
+  assert.ok(completed && completed.type === "completed" && completed.replacedProvisional);
+  assert.equal(completed.answerText, collected.result.answerText);
+});
+
+test("patch14. valid Unicode citation yields source-derived offsets", async () => {
+  const doc = buildDoc();
+  const {result} = await collectEvents(emit =>
+    runGroundedChat({
+      documentId: DOC_A,
+      question: "AED 100,000 aggregate liability",
+      document: {id: DOC_A, name: "c.txt", status: "ready"},
+      source: doc.source,
+      retrieve: async req => searchMemoryDocument(doc, req.query, {limit: 8, expand: true}),
+      provider: createFakeProvider({
+        mode: "stream",
+        chunks: ["The contract limits the Supplier’s aggregate liability to **AED\u202F100,000**【e1】."]
+      }),
+      emit
+    })
+  );
+  assert.equal(result.status, "answered");
+  assert.ok(result.citations.length >= 1);
+  const c = result.citations[0];
+  assert.equal(c.documentId, DOC_A);
+  assert.ok(c.endOffset > c.startOffset);
+  assert.equal(doc.source.text.slice(c.startOffset, c.endOffset), c.quote);
+  assert.equal(verifyQuote(doc.source, c.quote).verified, true);
+  assert.ok(/AED 100,000/.test(c.quote));
+});
+
+test("patch15. SSE streaming behaviour still emits multiple deltas before completed", async () => {
+  const doc = buildDoc();
+  const {events} = await collectEvents(emit =>
+    runGroundedChat({
+      documentId: DOC_A,
+      question: "AED 100,000 aggregate liability",
+      document: {id: DOC_A, name: "c.txt", status: "ready"},
+      source: doc.source,
+      retrieve: async req => searchMemoryDocument(doc, req.query, {limit: 8, expand: true}),
+      provider: createFakeProvider({
+        mode: "stream",
+        chunks: ["Part A ", "Part B ", "[e1]"]
+      }),
+      emit
+    })
+  );
+  const types = events.map(e => e.type);
+  assert.ok(types.filter(t => t === "answer_delta").length >= 2);
+  assert.ok(types.indexOf("generation_started") < types.indexOf("answer_delta"));
+  assert.equal(types.at(-1), "completed");
 });

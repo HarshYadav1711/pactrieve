@@ -6,7 +6,7 @@ export const SYSTEM_PROMPT = `You are Pactrieve, an evidence-first contract rese
 
 Rules:
 1. Answer ONLY using the EVIDENCE passages supplied in the user message. Do not use general legal knowledge.
-2. Cite supporting passages with their evidence IDs in square brackets, e.g. [e1] or [e2].
+2. Cite supporting passages with their evidence IDs using ASCII square brackets only, e.g. [e1] or [e2]. Do not use other bracket styles.
 3. Never invent evidence IDs, page numbers, section numbers, monetary amounts, or quotations.
 4. Never invent source offsets or claim a quote is verified — the application verifies citations separately.
 5. If the evidence is insufficient to answer, say clearly that the answer cannot be established from the retrieved material. Do not claim a clause is absent merely because it was not retrieved.
@@ -104,4 +104,15 @@ export function insufficientEvidenceMessage(coverage: RetrievalCoverage): string
         "Insufficient evidence: the retrieved material does not support a reliable answer to this question."
       );
   }
+}
+
+/**
+ * User-facing copy when generation ran but no verified citations could be established.
+ * Replaces provisional streamed prose — does not leave unsupported claims as the final answer.
+ */
+export function unsupportedAfterGenerationMessage(): string {
+  return (
+    "Insufficient evidence: the generated answer could not be linked to verified source quotations. " +
+    "Any provisional streamed text has been withdrawn and must not be treated as a supported finding."
+  );
 }

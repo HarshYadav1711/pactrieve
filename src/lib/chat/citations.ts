@@ -2,8 +2,19 @@ import {verifyQuote, type CanonicalSource} from "../evidence/verify.ts";
 import type {EvidenceItem, VerifiedCitation} from "./types.ts";
 import {getEvidenceById} from "./evidence.ts";
 
-/** Extract evidence ID references of the form [e1], [e2], (e3), or bare e12 in citation context. */
-const EVIDENCE_ID_RE = /\[(e\d+)\]|\((e\d+)\)|(?:^|[\s,;:])(e\d+)(?=[\s,.;:!?]|$)/gi;
+/**
+ * Extract evidence ID references from model output.
+ *
+ * Recognized forms (id must be `e` + digits only):
+ * - Canonical ASCII: [e1]
+ * - Parentheses: (e1)
+ * - CJK corner brackets observed from Groq gpt-oss: 【e1】
+ * - Bare e12 after whitespace/punctuation (conservative)
+ *
+ * Does not accept arbitrary bracketed text, page numbers, or invented labels.
+ */
+const EVIDENCE_ID_RE =
+  /\[(e\d+)\]|\u3010(e\d+)\u3011|\((e\d+)\)|(?:^|[\s,;:])(e\d+)(?=[\s,.;:!?\u3011\]]|$)/gi;
 
 /**
  * Collect unique evidence IDs referenced in model output.
@@ -15,7 +26,7 @@ export function extractReferencedEvidenceIds(answerText: string): string[] {
   let match: RegExpExecArray | null;
   const re = new RegExp(EVIDENCE_ID_RE.source, EVIDENCE_ID_RE.flags);
   while ((match = re.exec(answerText))) {
-    const id = (match[1] || match[2] || match[3] || "").toLowerCase();
+    const id = (match[1] || match[2] || match[3] || match[4] || "").toLowerCase();
     if (!id || seen.has(id)) continue;
     seen.add(id);
     found.push(id);
@@ -88,10 +99,8 @@ export function resolveCitations(
 }
 
 /**
- * When the model answers but cites nothing, attach registry items that appear
- * as literal substrings of the answer only if the answer clearly quotes them.
- * Conservative: we do NOT auto-attach all evidence. Callers decide whether
- * zero citations + non-abstention answer should be marked insufficient.
+ * When the model answers without ID markers but literally quotes evidence, attach those.
+ * Conservative: we do NOT auto-attach all evidence.
  */
 export function findLiteralQuotedEvidence(
   documentId: string,
@@ -102,7 +111,6 @@ export function findLiteralQuotedEvidence(
   const out: VerifiedCitation[] = [];
   for (const item of registry) {
     if (item.documentId !== documentId) continue;
-    // Require a substantial contiguous fragment (≥40 chars or full quote if shorter).
     const needle = item.quote.length <= 80 ? item.quote : item.quote.slice(0, 80);
     if (!answerText.includes(needle.trim()) && !normalizeWs(answerText).includes(normalizeWs(needle))) {
       continue;

@@ -11,7 +11,7 @@
 - **Phase 0:** Complete — foundation bootstrap + governance.
 - **Phase 1:** Complete — ingestion lifecycle verified live.
 - **Phase 2:** Complete (committed `437933c`) — structure-aware retrieval + coverage semantics.
-- **Phase 3:** Implementation complete in working tree (**uncommitted — user commits manually**). Grounded single-document streaming chat with verified evidence registry. Live LLM run **BLOCKED** (no `LLM_*` credentials in `.env.local`).
+- **Phase 3:** Implementation + live citation corrective patch in working tree (**uncommitted — user commits manually**). Grounded streaming chat; citation parser accepts `[eN]` and observed Groq `【eN】`; unsupported answers replace provisional streamed claims. Live Groq verification **PASS** (`answered` + ≥1 verified citation).
 - **Phase 4+:** Not started. Do not auto-start.
 
 ## Current implementation

@@ -36,6 +36,13 @@ export type AnswerStatus =
   | "insufficient_evidence"
   | "failed";
 
+/** Machine-readable reason for engineering diagnostics (not end-user prose). */
+export type UnsupportedReasonCode =
+  | "RETRIEVAL_INSUFFICIENT"
+  | "NO_VERIFIED_CITATIONS"
+  | "REJECTED_EVIDENCE_IDS"
+  | "PROVIDER_FAILED";
+
 export type ChatStreamEvent =
   | {type: "retrieval_started"; documentId: string; question: string}
   | {
@@ -56,6 +63,9 @@ export type ChatStreamEvent =
       coverageStatus: CoverageStatus;
       rejectedEvidenceIds: string[];
       provisional: boolean;
+      /** True when streamed provisional answer text was replaced by the final verified/insufficient payload. */
+      replacedProvisional: boolean;
+      reasonCode?: UnsupportedReasonCode;
     }
   | {type: "error"; code: string; message: string};
 
@@ -68,4 +78,8 @@ export interface ChatPipelineResult {
   evidenceCount: number;
   promptChars: number;
   truncated: boolean;
+  replacedProvisional: boolean;
+  reasonCode?: UnsupportedReasonCode;
+  /** Provisional model draft retained for diagnostics only — never treat as verified answer. */
+  modelDraft?: string;
 }
