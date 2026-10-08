@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 1 ingestion complete (local + live Supabase verified).** PDF/DOCX upload through private Storage, extraction, persistence, library reopen, retry, and delete cleanup work against a configured project. AI chat, streaming/cancellation, PDF page-overlay highlights, multi-document Q&A, comparison, and agentic tools are **not implemented**. Do not claim otherwise.
+> **Status: Phase 2 retrieval implemented (verify locally; commit manually).** Phase 1 ingestion remains verified. Phase 2 adds structure-aware chunking and phrase-safe document retrieval with honest coverage statuses (no LLM). AI chat, streaming/cancellation, PDF page-overlay highlights, multi-document Q&A, comparison, and agentic tools are **not implemented**. Do not claim otherwise.
 
 ## Technology
 
@@ -106,27 +106,31 @@ Unit tests need no model key or database. They cover monetary hallucinations, pr
 | --- | --- |
 | Document upload / extract / library / delete | Phase 1 verified (unit + live Supabase smoke) |
 | Deterministic quote verifier + unit tests | Verified (unit); chat integration later |
+| Structure-aware retrieval + coverage statuses | Phase 2 implemented (47 unit tests; live retrieval smoke) |
 | Requirements matrix & governance docs | Present |
-| Retrieval / coverage honesty for 150 pages | Phase 2 (ingestion of synthetic 150-page PDF verified) |
 | AI chat / streaming / cancel / history | Not started |
 | Citation highlighting in viewer | Not started |
 | Multi-doc Q&A / comparison / Part C | Not started |
 | Deployed demo / video / written note | Not started |
 
-## Phase 1 checks
+## Checks
 
 ```powershell
 npm run typecheck
 npm test
 npm run build
-# with app running and .env.local configured:
+# Phase 1 live ingestion (app running):
 node --env-file=.env.local scripts/phase1-live-smoke.mjs
+# Phase 2 live retrieval (no app required):
+node --env-file=.env.local --experimental-strip-types scripts/phase2-live-retrieval.mjs
 ```
+
+Optional Postgres FTS helper: run `db/migrations/20261008_phase2_search_helper.sql` in the Supabase SQL editor.
 
 ## Next milestones
 
-1. Phase 2 — source-aware retrieval and honest absence/coverage behaviour.
-2. Streaming LLM chat, persisted messages, cancellation retaining partial content.
+1. Commit Phase 2 after review (`feat: implement source-aware document retrieval`).
+2. Phase 3 — streaming grounded chat using `retrieveDocument` + `verifyQuote`.
 3. Citation highlighting; multi-doc QA; comparison; Part C Option 2.
 4. Deployment, screenshots, demo video, technical note.
 

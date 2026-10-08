@@ -19,3 +19,10 @@ test("empty and short sources create expected chunks",() => {
 test("invalid chunk dimensions are rejected",() => {
   assert.throws(()=>createChunks("content",50,50));
 });
+
+test("structure-aware chunking keeps section labels on numbered clauses", () => {
+  const text = "1. DEFINITIONS\nConfidential Information means secrets.\n\n8. LIMITATION OF LIABILITY\nCap is AED 100,000.\n\n8.2 Exceptions\nFraud is excluded.\n";
+  const chunks = createChunks(text, 120, 20);
+  assert.ok(chunks.some(chunk => chunk.sectionLabel && /LIMITATION|8\./i.test(chunk.sectionLabel)));
+  for (const chunk of chunks) assert.equal(chunk.content, text.slice(chunk.startOffset, chunk.endOffset));
+});

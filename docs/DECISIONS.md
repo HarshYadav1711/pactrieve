@@ -1,5 +1,14 @@
 # Engineering decisions
 
+## 2026-10-08 — Phase 2 structure-aware retrieval
+
+- **Decision:** No schema-breaking migration. Reuse `document_chunks` + existing `search_vector` GIN. Optional additive SQL function `pactrieve_search_chunks` for FTS candidate discovery; application falls back safely if absent.
+- **Decision:** Derive `sectionLabel` at chunk/retrieval time from heading heuristics; do not require a new DB column.
+- **Decision:** Final ranking is phrase-safe in-process scoring over persisted chunks (amounts/negations). Postgres FTS/ILIKE may propose candidates but must not outrank exact amount phrases via token overlap (`100` vs `1,000,000`).
+- **Decision:** Typed coverage statuses distinguish matches, inconclusive search, partial unreadable source, and failures — never “clause absent” from top-k miss.
+- **Decision:** Context expansion always retains seed hits; neighbors fill remaining char budget only.
+- **Decision:** Phase 2 changes left **uncommitted** for manual user review (per phase instructions).
+
 ## 2026-10-08 — Phase 1 ingestion hardening
 
 - **Decision:** Keep multi-step Supabase writes (no fake cross-storage transaction). Use status claim (`uploading|failed` → `processing`), optional stale `processing` reclaim after 2 minutes, purge-then-insert for pages/chunks, and best-effort derived-row cleanup on failure before marking `failed`.
