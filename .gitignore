@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# next.js
+.next/
+out/
+
+# env and secrets
+.env
+.env.*
+!.env.example
+
+# logs / OS
+*.log
+npm-debug.log*
+.DS_Store
+Thumbs.db
+
+# test / coverage
+coverage/
+
+# typescript build info (next-env.d.ts is committed)
+*.tsbuildinfo
+
+# IDE
+.idea/
+.vscode/
