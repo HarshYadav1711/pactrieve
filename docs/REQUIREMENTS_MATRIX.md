@@ -1,8 +1,10 @@
 # Requirements matrix
 
-Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`).
+Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail and acceptance criteria: `docs/PRD.md`. Phase gates: `docs/phases.md`. Agent entry: `/AGENTS.md`.
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
+
+**Note:** The “Phase” column below still uses the earlier coarse labels (0–6) from Phase 0 bootstrap. Prefer `docs/phases.md` (0–13) for new work planning; statuses themselves were not changed by the governance-pack integration.
 
 Evidence gates for this update (2026-10-08 Phase 0 import):
 

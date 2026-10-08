@@ -15,3 +15,5 @@ Local copy path used for Phase 0 extraction:
 - **Evaluation:** Deployed app exercised manually; GitHub + README; demo video; short technical note.
 
 See `REQUIREMENTS_MATRIX.md` for traceability IDs and implementation status.
+
+Governance (implementation discipline, not a substitute for this assignment): `../AGENTS.md`, `rules.md`, `PRD.md`, `Architecture.md`, `Design.md`, `phases.md`.

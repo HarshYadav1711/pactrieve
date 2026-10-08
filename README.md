@@ -12,8 +12,10 @@ Next.js (App Router), TypeScript, Supabase Postgres + private Storage, PDF.js, M
 
 ## Assignment (authoritative)
 
-Requirements come from **SDE Assignment.pdf**. Traceability lives in:
+Requirements come from **SDE Assignment.pdf**. Traceability and governance live in:
 
+- `AGENTS.md` — Cursor/agent reading order and invariants
+- `docs/rules.md` / `PRD.md` / `Architecture.md` / `Design.md` / `phases.md` — product and phase governance
 - `docs/ASSIGNMENT_SOURCE.md` — assignment summary and source path
 - `docs/REQUIREMENTS_MATRIX.md` — requirement IDs and implementation status
 - `docs/PROJECT_CONTEXT.md` — current state and next phase
@@ -21,6 +23,8 @@ Requirements come from **SDE Assignment.pdf**. Traceability lives in:
 - `docs/starter-import/` — original starter README / context preserved at import time
 
 **Part C choice:** Option 2 — agentic document research (not started).
+
+> Governance documents are specifications and process controls. They do **not** prove features are implemented. See the requirements matrix for evidence-backed status.
 
 ## Requirements
 

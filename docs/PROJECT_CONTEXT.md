@@ -4,6 +4,8 @@
 
 **Assignment:** Six-page SDE legal-contract web app (see `ASSIGNMENT_SOURCE.md` / SDE Assignment.pdf). Deadline: 3 days from receipt. Most important requirement: independently verified quotes with exact source navigation. Parts A and B required; Part C Option 2 selected (agentic document research).
 
+**Governance (agents read first via `AGENTS.md`):** `docs/rules.md` → `PRD.md` → `Architecture.md` → `Design.md` → `phases.md`, then this file, `DECISIONS.md`, `REQUIREMENTS_MATRIX.md`, `ASSIGNMENT_SOURCE.md`. Phase numbering and gates: `docs/phases.md`. Design system: `docs/Design.md` (proposed tokens — not yet applied to UI).
+
 ## Phase 0 continuation (2026-10-08)
 
 - Repository previously held Git init + Phase 0 docs only (`ASSIGNMENT_SOURCE.md`, `REQUIREMENTS_MATRIX.md`, early context/decisions).
@@ -31,16 +33,13 @@
 
 ## Phase boundaries
 
-- **Phase 0:** Import starter, preserve docs, validate install/typecheck/test/build, audit foundation, update matrix — no new feature work beyond blockers.
-- **Phase 1+:** Harden ingestion as needed, then chat/streaming, retrieval, highlighting, multi-doc, comparison, Part C.
+- **Phase 0 (complete for local foundation):** Import starter, preserve docs, validate install/typecheck/test/build, audit foundation, update matrix. Governance pack integrated separately (docs-only).
+- **Subsequent work:** Follow `docs/phases.md` (Phase 1 = reliable ingestion lifecycle; Phase 2 = retrieval; Phase 3+ = chat, history/stop, highlighting, multi-doc, comparison, Part C, deploy, handoff). Do not auto-start the next phase.
 
 ## Next immediate steps
 
-1. Configure Supabase per README; run browser smoke tests (PDF, DOCX, scanned empty PDF).
-2. Upgrade PDF spacing/layout reconstruction where live files fail; confirm verifier offsets.
-3. Implement streaming chat + persistence + cancel.
-4. Retrieval and abstention before large-context claims.
-5. Highlighting, multi-doc, comparison, Part C Option 2, deploy, demo.
+1. Configure Supabase per README; run browser smoke tests (PDF, DOCX, scanned empty PDF) — Phase 1 gate.
+2. Follow `docs/phases.md` for retrieval, chat, highlighting, multi-doc, comparison, Part C Option 2, deploy, and demo — one phase at a time.
 
 ## Ground rules
 

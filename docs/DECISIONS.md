@@ -1,5 +1,13 @@
 # Engineering decisions
 
+## 2026-10-08 — Governance pack adoption (docs-only)
+
+- **Decision:** Import `Pactrieve_Governance_Pack.zip` into the repo as `AGENTS.md` plus `docs/{rules,PRD,Architecture,Design,phases}.md` (and preserve pack `INSTALL_NOTES.md` under `docs/`).
+- **Decision:** Cursor/agent reading order is defined in root `AGENTS.md` (rules → PRD → Architecture → Design → phases → PROJECT_CONTEXT → DECISIONS → REQUIREMENTS_MATRIX → ASSIGNMENT_SOURCE).
+- **Decision:** Employer assignment PDF remains highest authority for *what* must be built; governance docs control *how* and phase gates where they do not contradict the assignment.
+- **Open for review:** `rules.md` §1 lists reading assignment / `ASSIGNMENT_SOURCE` / `PROJECT_CONTEXT` before `rules.md`, while `AGENTS.md` starts with `rules.md` per integration instructions. Conflict resolution order still places the assignment PDF first; reading-order meta-difference left documented rather than silently rewriting `rules.md`.
+- **Open for review:** Earlier coarse “Phase 1+” labels in historical notes differ from the finer `phases.md` roadmap (Phase 1 ingestion … Phase 13 handoff). Adopt `phases.md` going forward; do not rewrite historical matrix phase columns without a dedicated status pass.
+
 ## 2026-10-08 — Requirements authority (preserved from early Phase 0)
 
 - **Decision:** Treat `C:\Users\harsh\Downloads\SDE Assignment.pdf` as the authoritative feature and submission checklist.
