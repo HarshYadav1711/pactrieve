@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 10 Agent Research implemented (uncommitted — review/commit manually).** Phases 0–9 remain committed through `025fd88`. Use **Ask Documents** for direct Q&A, **Agent Research** for multi-step tool investigation, and **Compare Versions** for revision analysis.
+> **Status: Phase 11 release hardening in working tree (uncommitted — review/commit manually).** Phases 0–10 committed through `7c02bbc`. Public deploys **must** set `PACTRIEVE_ACCESS_TOKEN` (shared evaluator passphrase). Use only synthetic contracts on shared hosts.
 
 ## Technology
 
@@ -64,10 +64,13 @@ Open http://localhost:3000 .
 | `LLM_BASE_URL` | Provider base URL (e.g. `https://api.groq.com/openai/v1`) — no trailing slash required |
 | `LLM_MODEL` | Model id supported by that provider |
 | `LLM_TIMEOUT_MS`, `LLM_MAX_TOKENS` | Optional (defaults 45000 ms / 1024 tokens) |
+| `PACTRIEVE_ACCESS_TOKEN` | **Required on any public URL.** Shared deployment passphrase (not multi-user login). When set, `/api/*` needs Bearer token or unlock cookie from `POST /api/access`. Leave unset for local single-user work. |
 
 The browser uploads via a short-lived signed token from a server route; raw files go to private Storage. After upload, the process API downloads, validates signatures, extracts text, and stores page/offset mapping and retrieval chunks.
 
-**Limitations:** Processing runs synchronously in a Next.js request (max duration 60s). Durable workers are needed for timeouts/restarts on large files. Auth is omitted per assignment — use only synthetic/non-confidential contracts on any shared deploy.
+**Security note:** Private Supabase Storage does **not** protect Next.js API routes that use the service-role key. Without `PACTRIEVE_ACCESS_TOKEN`, anonymous callers can list/download/delete documents and burn LLM quota. This is intentional for local demos only.
+
+**Limitations:** Processing is synchronous (`maxDuration` 120s on process; agent 90s). Dense commercial PDFs may still need durable workers. Assignment requires no full auth platform — the access token is a shared gate, not accounts.
 
 ## Checks
 
@@ -187,9 +190,11 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 10 (`feat: implement bounded agentic contract research` or similar).
-2. Phase 11 — adversarial / accessibility review.
-3. Deployment, screenshots, demo video, technical note.
+1. Review/commit Phase 11 (`test: harden contract analysis and evidence workflows` or similar).
+2. Phase 12 — live deploy with `PACTRIEVE_ACCESS_TOKEN` set; evaluator smoke on the public URL.
+3. Phase 13 — screenshots, demo video, technical note.
+
+Release audit: `docs/PHASE11_RELEASE_AUDIT.md`.
 
 `postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).
 

@@ -34,7 +34,7 @@ export async function GET(request: Request) {
     const conversations = await store.listConversationsForDocumentSet(ids);
     return jsonOk({conversations, documentIds: ids});
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Could not list conversations.", 500);
+    return jsonError("Could not list conversations.", 500);
   }
 }
 
@@ -59,6 +59,6 @@ export async function POST(request: Request) {
     const conversation = await store.createConversationForDocuments(documentIds);
     return jsonOk({conversation}, 201);
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Could not create conversation.", 500);
+    return jsonError("Could not create conversation.", 500);
   }
 }

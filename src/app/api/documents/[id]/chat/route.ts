@@ -78,10 +78,14 @@ export async function POST(request: Request, {params}: RouteContext) {
         const status = typeof error === "object" && error && "status" in error
           ? Number((error as {status: number}).status)
           : 500;
+        const raw = error instanceof Error ? error.message : "Chat pipeline failed.";
         emit({
           type: "error",
           code: status === 404 ? "CONVERSATION_NOT_FOUND" : "CHAT_PIPELINE_FAILED",
-          message: error instanceof Error ? error.message : "Chat pipeline failed."
+          message:
+            status >= 400 && status < 500 && raw && !/supabase|postgres|ECONN|stack/i.test(raw)
+              ? raw
+              : "Chat pipeline failed."
         });
       } finally {
         controller.close();

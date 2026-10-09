@@ -13,7 +13,8 @@ import {
 import {createOpenAiCompatibleProvider, loadLlmConfig} from "@/lib/llm";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+/** Agent wall budget is ~55s; leave headroom under Vercel Hobby (≤300s). */
+export const maxDuration = 90;
 
 export async function POST(request: Request) {
   let body: unknown;
@@ -97,7 +98,15 @@ export async function POST(request: Request) {
           maxTokens: llm.config.maxTokens
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Agent research failed.";
+        const status =
+          typeof error === "object" && error && "status" in error
+            ? Number((error as {status: number}).status)
+            : 500;
+        const raw = error instanceof Error ? error.message : "Agent research failed.";
+        const message =
+          status >= 400 && status < 500 && raw && !/supabase|postgres|ECONN|stack/i.test(raw)
+            ? raw
+            : "Agent research failed.";
         emit({type: "error", code: "AGENT_FAILED", message});
       } finally {
         controller.close();

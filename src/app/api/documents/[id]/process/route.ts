@@ -7,7 +7,8 @@ import {createChunks} from "@/lib/documents/chunks";
 import {DOCUMENT_TYPES, type AllowedDocumentType} from "@/lib/documents/validate";
 
 export const runtime = "nodejs";
-export const maxDuration = 60;
+/** Dense 150-page extraction can approach a minute; Vercel Hobby allows ≤300s. */
+export const maxDuration = 120;
 
 /** Reclaim stuck processing leases older than this window (sync serverless crash recovery). */
 const STALE_PROCESSING_MS = 2 * 60 * 1000;

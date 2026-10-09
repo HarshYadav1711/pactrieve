@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createClient} from "@supabase/supabase-js";
+import {AccessGate} from "@/components/AccessGate";
 import {MULTI_DOC_MAX, MULTI_DOC_MIN} from "@/lib/chat/types";
 
 type DocumentRecord = {
@@ -155,6 +156,7 @@ export default function LibraryHome() {
             {uploading ? "Working…" : "Choose document"}<span aria-hidden="true">↗</span>
           </button><small>PDF or DOCX · Up to 30 MB · Original stored privately</small>
         </section>
+        <AccessGate onUnlocked={() => void refresh()} />
         {error && <div className="error-banner" role="alert"><b>Action needed:</b> {error}</div>}
         <section className="library-section"><div className="section-heading"><div><div className="eyebrow">WORKSPACE / FILES</div>
           <h2>Document library <span className="count">{documents.length}</span></h2></div>
@@ -243,7 +245,7 @@ export default function LibraryHome() {
         <div className="principle"><span>01</span><div><b>Immutable source offsets</b><p>Every extracted segment retains its original document position.</p></div></div>
         <div className="principle"><span>02</span><div><b>Deterministic verification</b><p>Quotes are matched against source text, with whitespace normalization.</p></div></div>
         <div className="principle"><span>03</span><div><b>Explicit uncertainty</b><p>Missing and unreadable content is reported rather than invented.</p></div></div>
-        <div className="sidebar-note">CURRENT PHASE<br/><strong>Ingestion + evidence verification</strong><small>AI chat, comparison and page-overlay citations follow in later phases.</small></div>
+        <div className="sidebar-note">WORKSPACE MODES<br/><strong>Inspect · Ask · Agent · Compare</strong><small>Use synthetic evaluator contracts on any shared deployment.</small></div>
       </aside></div>
     </main><footer className="footer">PACTRIEVE · ENGINEERING ASSESSMENT <span>Document insights are not legal advice.</span></footer>
   </div>;

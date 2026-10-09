@@ -105,6 +105,9 @@ export async function POST(request: Request) {
       typeof error === "object" && error && "status" in error
         ? Number((error as {status: number}).status)
         : 500;
-    return jsonError(error instanceof Error ? error.message : "Comparison failed.", status || 500);
+    if (status === 400 || status === 409) {
+      return jsonError(error instanceof Error ? error.message : "Comparison failed.", status);
+    }
+    return jsonError("Comparison failed.", status || 500);
   }
 }

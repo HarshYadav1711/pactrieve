@@ -1,5 +1,16 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 11 adversarial QA and public-access gate
+
+- **Decision:** Treat unauthenticated service-role API routes as **P0** for any public URL. Private Storage alone is insufficient.
+- **Decision:** Add optional shared deployment passphrase `PACTRIEVE_ACCESS_TOKEN` (middleware + `/api/access` + library unlock UI). Not multi-user auth / accounts (assignment constraint). Unset locally = open single-user.
+- **Decision:** Cookie `Secure` flag follows request HTTPS / `x-forwarded-proto`, not bare `NODE_ENV=production` (fixes local `next start` over HTTP).
+- **Decision:** Raise process `maxDuration` to 120s and agent to 90s; keep app-level agent wall ~55s. Avoid durable-worker architecture without approval.
+- **Decision:** Sanitize 5xx API/SSE error strings that previously echoed raw `Error.message`.
+- **Decision:** Phase 11 left **uncommitted**. No Phase 12 deploy in this phase.
+- **Observation:** Baseline 213→**219** tests; typecheck + build pass. Production `:3002` smoke + browser Agent desk PASS. Gated `:3003` Bearer/cookie unlock PASS after Secure fix. Sparse 150-page extract ~668ms (not dense-PDF proof).
+- **Limitation:** Public host without the token remains world-readable. Live Groq Stop timing still unproven. Next.js middleware→proxy deprecation warning noted.
+
 ## 2026-10-09 — Phase 10 bounded agentic document research
 
 - **Decision:** Extend existing OpenAI-compatible provider with non-streaming `chatWithTools`; keep final answer on `streamChat`. No second networking stack / SDK.
@@ -7,8 +18,8 @@
 - **Decision:** Server-enforced budgets: max 5 rounds, 10 tool calls, 2 identical fingerprints, ~55s wall, 8 model requests, bounded result JSON.
 - **Decision:** Evidence registry assigns stable `eN` / `pN` ids; final citations via `resolveCitationsMulti`. Model cannot set offsets/verification.
 - **Decision:** Separate `/agent` workspace from Ask Documents (`/research`) and Compare Versions. Reuse conversation store + Stop poll; activity timeline is stream-ephemeral (final answer + citations durable).
-- **Decision:** Phase 10 left **uncommitted** for manual review. No Phase 11.
-- **Observation:** Live Groq multi-round PASS (~26s): search → inspect `p1` → further searches; citations on alpha/beta with AED 100,000 / 1,000,000 and 30/60-day notice. Browser PASS: reopen conversation; Alpha/Beta citation SourceFocus highlights. Suite **213/213**; typecheck + build pass (`/agent`, `/api/agent/*`).
+- **Decision:** Phase 10 committed as `7c02bbc`.
+- **Observation:** Live Groq multi-round PASS (~26s): search → inspect `p1` → further searches; citations on alpha/beta with AED 100,000 / 1,000,000 and 30/60-day notice. Browser PASS: reopen conversation; Alpha/Beta citation SourceFocus highlights. Suite **213/213** at Phase 10 commit.
 - **Limitation:** Activity history not persisted as structured events. Live Stop timing against Groq tool rounds not separately timed. Model may hit max_rounds before exhaustive coverage — disclosed via `limitReason`. Prompt-injection defenses are best-effort.
 
 ## 2026-10-09 — Phase 9 substantive significance and severity filtering

@@ -32,7 +32,7 @@ export async function DELETE(_request: Request, {params}: RouteContext) {
       // Storage object may already be gone; do not claim full success.
       return jsonError("Stored file was removed, but the database record could not be deleted. Retry delete shortly.", 500);
     }
-    return NextResponse.json({deleted: true});
+    return NextResponse.json({deleted: true}, {headers: {"Cache-Control": "no-store"}});
   } catch {
     return jsonError("Could not delete document; retry later.", 500);
   }

@@ -47,6 +47,6 @@ export async function GET(request: Request, {params}: RouteContext) {
       documentIds
     });
   } catch (error) {
-    return jsonError(error instanceof Error ? error.message : "Could not load conversation.", 500);
+    return jsonError("Could not load conversation.", 500);
   }
 }

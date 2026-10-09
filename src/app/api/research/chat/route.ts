@@ -101,10 +101,14 @@ export async function POST(request: Request) {
           typeof error === "object" && error && "status" in error
             ? Number((error as {status: number}).status)
             : 500;
+        const raw = error instanceof Error ? error.message : "Multi-document chat failed.";
         emit({
           type: "error",
           code: status === 404 ? "CONVERSATION_NOT_FOUND" : "CHAT_PIPELINE_FAILED",
-          message: error instanceof Error ? error.message : "Multi-document chat failed."
+          message:
+            status >= 400 && status < 500 && raw && !/supabase|postgres|ECONN|stack/i.test(raw)
+              ? raw
+              : "Multi-document chat failed."
         });
       } finally {
         controller.close();
