@@ -16,9 +16,16 @@ import {
 
 interface MemoryConversation {
   id: string;
-  documentId: string;
+  documentIds: string[];
   createdAt: string;
   updatedAt: string;
+}
+
+function sameDocumentSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort();
+  const right = [...b].sort();
+  return left.every((id, i) => id === right[i]);
 }
 
 interface MemoryMessage {
@@ -75,12 +82,19 @@ export function createMemoryConversationStore(): MemoryConversationStore {
 
   return {
     async createConversation(documentId) {
+      return this.createConversationForDocuments([documentId]);
+    },
+
+    async createConversationForDocuments(documentIds) {
+      const unique = [...new Set(documentIds.map(id => id.trim()).filter(Boolean))];
+      if (!unique.length) throw new Error("At least one document ID is required.");
       const now = new Date().toISOString();
       const id = randomUUID();
-      conversations.set(id, {id, documentId, createdAt: now, updatedAt: now});
+      conversations.set(id, {id, documentIds: unique, createdAt: now, updatedAt: now});
       return {
         id,
-        documentId,
+        documentId: unique[0]!,
+        documentIds: unique,
         createdAt: now,
         updatedAt: now,
         messageCount: 0,
@@ -90,12 +104,30 @@ export function createMemoryConversationStore(): MemoryConversationStore {
 
     async listConversations(documentId, limit = DEFAULT_CONVERSATION_LIMIT) {
       return [...conversations.values()]
-        .filter(c => c.documentId === documentId)
+        .filter(c => c.documentIds.includes(documentId))
         .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
         .slice(0, limit)
         .map(c => ({
           id: c.id,
-          documentId: c.documentId,
+          documentId: c.documentIds[0]!,
+          documentIds: c.documentIds,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+          messageCount: [...messages.values()].filter(m => m.conversationId === c.id).length,
+          preview: previewFor(c.id)
+        }));
+    },
+
+    async listConversationsForDocumentSet(documentIds, limit = DEFAULT_CONVERSATION_LIMIT) {
+      const target = [...new Set(documentIds)];
+      return [...conversations.values()]
+        .filter(c => sameDocumentSet(c.documentIds, target))
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, limit)
+        .map(c => ({
+          id: c.id,
+          documentId: c.documentIds[0]!,
+          documentIds: c.documentIds,
           createdAt: c.createdAt,
           updatedAt: c.updatedAt,
           messageCount: [...messages.values()].filter(m => m.conversationId === c.id).length,
@@ -105,22 +137,33 @@ export function createMemoryConversationStore(): MemoryConversationStore {
 
     async getConversation(conversationId, documentId, messageLimit = DEFAULT_MESSAGE_LIMIT) {
       const c = conversations.get(conversationId);
-      if (!c || c.documentId !== documentId) return null;
+      if (!c || !c.documentIds.includes(documentId)) return null;
       const rows = sortedMessages(conversationId)
         .slice(-messageLimit)
         .map(toStored);
       return {
         id: c.id,
-        documentId: c.documentId,
+        documentId: c.documentIds[0]!,
+        documentIds: c.documentIds,
         createdAt: c.createdAt,
         updatedAt: c.updatedAt,
         messages: rows
       };
     },
 
+    async listConversationDocumentIds(conversationId) {
+      const c = conversations.get(conversationId);
+      return c ? [...c.documentIds] : [];
+    },
+
     async assertConversationDocument(conversationId, documentId) {
       const c = conversations.get(conversationId);
-      return Boolean(c && c.documentId === documentId);
+      return Boolean(c && c.documentIds.includes(documentId));
+    },
+
+    async assertConversationExactDocuments(conversationId, documentIds) {
+      const c = conversations.get(conversationId);
+      return Boolean(c && sameDocumentSet(c.documentIds, documentIds));
     },
 
     async appendUserMessage(conversationId, documentId, content) {
@@ -191,7 +234,7 @@ export function createMemoryConversationStore(): MemoryConversationStore {
       const msg = messages.get(messageId);
       if (!msg) return {ok: false, status: null, alreadyTerminal: false};
       const conv = conversations.get(msg.conversationId);
-      if (!conv || conv.documentId !== documentId) {
+      if (!conv || !conv.documentIds.includes(documentId)) {
         return {ok: false, status: null, alreadyTerminal: false};
       }
       if (isTerminalStatus(msg.status)) {
@@ -225,7 +268,7 @@ export function createMemoryConversationStore(): MemoryConversationStore {
       msg.status = input.status;
       msg.cancelRequested = msg.cancelRequested || input.status === "stopped";
       msg.updatedAt = new Date().toISOString();
-      citations.set(msg.id, mapCitations(msg.id, input.documentId, input.citations ?? []));
+      citations.set(msg.id, mapCitations(msg.id, input.citations ?? []));
       touchConversation(msg.conversationId);
       return {ok: true, status: msg.status, content: msg.content};
     },
@@ -269,13 +312,13 @@ export function createMemoryConversationStore(): MemoryConversationStore {
   };
 }
 
-function mapCitations(messageId: string, documentId: string, list: VerifiedCitation[]): StoredCitation[] {
+function mapCitations(messageId: string, list: VerifiedCitation[]): StoredCitation[] {
   return list
-    .filter(c => c.documentId === documentId && c.verified)
+    .filter(c => c.verified && c.documentId)
     .map(c => ({
       id: randomUUID(),
       messageId,
-      documentId,
+      documentId: c.documentId,
       sourceStart: c.startOffset,
       sourceEnd: c.endOffset,
       quote: c.quote,

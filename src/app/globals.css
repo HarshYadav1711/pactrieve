@@ -112,3 +112,18 @@
 .docx-cite-hl{position:absolute;background:rgba(249,219,114,.55);outline:1px solid #d6af38;mix-blend-mode:multiply;border-radius:1px}
 .docx-leaf-active{scroll-margin:48px}
 @media(max-width:768px){.docx-viewer{max-height:55vh}.docx-scroll{padding:14px}}
+
+/* Phase 7 - multi-document research */
+.library-heading-actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.selection-count{font-size:12px;color:var(--muted);letter-spacing:.02em}
+.doc-select{display:grid;place-items:center;padding:0 4px}
+.doc-select input{width:16px;height:16px;accent-color:#17695f}
+.document-row.is-selected{background:#f3f7f5;box-shadow:inset 3px 0 0 #17695f}
+.selected-doc-chips{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-wrap:wrap;gap:8px}
+.doc-chip{display:inline-flex;align-items:center;gap:8px;border:1px solid #d8dedd;background:#fff;padding:6px 10px;font-size:12px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.doc-chip-format{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:10px;letter-spacing:.04em;color:#56636a;border:1px solid #d8dedd;padding:1px 5px}
+.research-doc-switch{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px}
+.research-doc-switch button{border:1px solid #d8dedd;background:#fff;padding:6px 10px;font-size:12px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.research-doc-switch button.active{border-color:#17695f;color:#17695f;background:#f3f7f5}
+.chat-meta.multi-coverage{display:flex;flex-direction:column;gap:4px}
+@media(max-width:768px){.library-heading-actions{width:100%;justify-content:flex-start}}

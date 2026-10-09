@@ -1,5 +1,18 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 7 multi-document comparative Q&A
+
+- **Decision:** Reuse existing `conversation_documents` (no new tables). Conversations for research are exact-set locked: follow-up questions must send the same document ID set.
+- **Decision:** Selection limit **2–5** ready documents — balances comparative value against retrieval fan-out and LLM evidence budget (`MULTI_DOC_EVIDENCE_CHAR_BUDGET` ≈ 8k chars with per-document fair share).
+- **Decision:** Retrieve independently per document (optional concept sub-queries for termination/liability/etc.), then merge into one globally unique evidence registry (`e1…`) each carrying `documentId` + `documentName`.
+- **Decision:** `resolveCitationsMulti` verifies each evidence ID only against that ID’s own canonical source — identical quotes in two contracts never cross-attribute.
+- **Decision:** Comparative system prompt requires a synthesis with similarities/differences; stacking unrelated per-doc summaries is insufficient.
+- **Decision:** Citation persistence stores each citation’s own `document_id` (not only the conversation primary id).
+- **Decision:** UI: library checkboxes → `/research` desk with MultiDocumentChat + switchable PDF/DOCX viewers. Single-document `/documents/:id` chat unchanged.
+- **Decision:** Phase 7 left **uncommitted** for manual user review. No Phase 8 clause-diff work.
+- **Observation:** Live Groq PASS on `phase7-alpha` vs `phase7-beta` — comparative notice (30 vs 60 days) and liability (AED 100,000 vs AED 1,000,000) with citations bound to the correct document IDs. Browser PASS: historical conversation reopen + Alpha citation opens Alpha DOCX preview with highlight.
+- **Limitation:** Lexical retrieval may miss provisions; missing evidence ≠ absence. Aggregate coverage notes gaps per document. Live Groq Stop timing still unproven.
+
 ## 2026-10-09 — Phase 6 DOCX semantic preview and citation highlighting
 
 - **Decision:** Do **not** claim Word page-fidelity. Navigate by verified UTF-16 canonical offsets into a semantic HTML/React preview (headings, paragraphs, lists, tables, emphasis).

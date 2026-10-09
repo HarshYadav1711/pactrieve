@@ -5,6 +5,9 @@ import type {EvidenceItem} from "./types.ts";
 /** Soft upper bound on characters of evidence text placed in the LLM prompt. */
 export const DEFAULT_EVIDENCE_CHAR_BUDGET = 6_000;
 
+/** Aggregate budget when comparing multiple documents (Phase 7). */
+export const MULTI_DOC_EVIDENCE_CHAR_BUDGET = 8_000;
+
 export interface PreparedEvidence {
   items: EvidenceItem[];
   /** True when some retrieved passages were dropped to fit the char budget. */
@@ -152,4 +155,62 @@ function trimToBudget(text: string, budget: number): string {
 /** Look up evidence by id; returns undefined for invented IDs. */
 export function getEvidenceById(registry: EvidenceItem[], id: string): EvidenceItem | undefined {
   return registry.find(item => item.id === id);
+}
+
+export interface MultiDocEvidenceSource {
+  documentId: string;
+  documentName: string;
+  source: CanonicalSource;
+  retrieval: RetrievalResult;
+}
+
+export interface PreparedMultiEvidence extends PreparedEvidence {
+  /** Evidence counts after budgeting, keyed by document. */
+  countsByDocument: Record<string, number>;
+}
+
+/**
+ * Build a single cross-document evidence registry with globally unique IDs (e1…).
+ * Each document receives a fair share of the aggregate budget so one strong hit
+ * cannot starve another selected contract.
+ */
+export function prepareMultiDocumentEvidenceRegistry(
+  docs: MultiDocEvidenceSource[],
+  options: {charBudget?: number} = {}
+): PreparedMultiEvidence {
+  const aggregateBudget = options.charBudget ?? MULTI_DOC_EVIDENCE_CHAR_BUDGET;
+  const n = Math.max(1, docs.length);
+  const perDocBudget = Math.max(800, Math.floor(aggregateBudget / n));
+
+  const items: EvidenceItem[] = [];
+  const countsByDocument: Record<string, number> = {};
+  let truncated = false;
+  let rejectedPassages = 0;
+  let used = 0;
+
+  for (const doc of docs) {
+    countsByDocument[doc.documentId] = 0;
+    const local = prepareEvidenceRegistry(doc.documentId, doc.source, doc.retrieval, {
+      charBudget: perDocBudget
+    });
+    rejectedPassages += local.rejectedPassages;
+    if (local.truncated) truncated = true;
+
+    for (const item of local.items) {
+      if (used + item.quote.length > aggregateBudget && items.length > 0) {
+        truncated = true;
+        break;
+      }
+      const id = `e${items.length + 1}`;
+      items.push({
+        ...item,
+        id,
+        documentName: doc.documentName
+      });
+      countsByDocument[doc.documentId] = (countsByDocument[doc.documentId] ?? 0) + 1;
+      used += item.quote.length;
+    }
+  }
+
+  return {items, truncated, rejectedPassages, countsByDocument};
 }

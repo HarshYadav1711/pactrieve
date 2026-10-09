@@ -40,7 +40,10 @@ export function canTransition(from: MessageStatus, to: MessageStatus): boolean {
 
 export interface ConversationSummary {
   id: string;
+  /** Primary scoped document (first associated id). */
   documentId: string;
+  /** Full selected document set for multi-document research conversations. */
+  documentIds?: string[];
   createdAt: string;
   updatedAt: string;
   messageCount: number;
@@ -73,6 +76,7 @@ export interface StoredMessage {
 export interface ConversationDetail {
   id: string;
   documentId: string;
+  documentIds?: string[];
   createdAt: string;
   updatedAt: string;
   messages: StoredMessage[];
@@ -89,9 +93,16 @@ export interface FinalizeAssistantInput {
 
 export interface ConversationStore {
   createConversation(documentId: string): Promise<ConversationSummary>;
+  /** Create a conversation linked to multiple documents (Phase 7). IDs must be unique. */
+  createConversationForDocuments(documentIds: string[]): Promise<ConversationSummary>;
   listConversations(documentId: string, limit?: number): Promise<ConversationSummary[]>;
+  /** List conversations whose associated document set exactly matches (order-insensitive). */
+  listConversationsForDocumentSet(documentIds: string[], limit?: number): Promise<ConversationSummary[]>;
   getConversation(conversationId: string, documentId: string, messageLimit?: number): Promise<ConversationDetail | null>;
+  listConversationDocumentIds(conversationId: string): Promise<string[]>;
   assertConversationDocument(conversationId: string, documentId: string): Promise<boolean>;
+  /** True when conversation is linked to exactly the same document set. */
+  assertConversationExactDocuments(conversationId: string, documentIds: string[]): Promise<boolean>;
   appendUserMessage(conversationId: string, documentId: string, content: string): Promise<StoredMessage>;
   createAssistantMessage(conversationId: string, documentId: string): Promise<StoredMessage>;
   markStreaming(messageId: string): Promise<boolean>;

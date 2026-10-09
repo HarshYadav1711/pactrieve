@@ -1,8 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import {useCallback, useEffect, useRef, useState} from "react";
+import {useCallback, useEffect, useMemo, useRef, useState} from "react";
 import {createClient} from "@supabase/supabase-js";
+import {MULTI_DOC_MAX, MULTI_DOC_MIN} from "@/lib/chat/types";
 
 type DocumentRecord = {
   id: string; name: string; mime_type: string; size_bytes: number; status: string;
@@ -30,6 +31,7 @@ export default function LibraryHome() {
   const [activeName,setActiveName] = useState("");
   const [dragged,setDragged] = useState(false);
   const [error,setError] = useState<string | null>(null);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const refresh = useCallback(async () => {
     try {
@@ -83,7 +85,10 @@ export default function LibraryHome() {
     if (!response.ok) {
       const data = await response.json().catch(() => ({}));
       setError(data.error || "Could not delete document");
-    } else await refresh();
+    } else {
+      setSelectedIds(prev => prev.filter(x => x !== id));
+      await refresh();
+    }
   }
 
   async function retryProcessing(id: string) {
@@ -96,6 +101,28 @@ export default function LibraryHome() {
 
   const ready = documents.filter(d => d.status === "ready").length;
   const hasProblems = documents.some(d=>d.status === "failed");
+  const selectedReady = useMemo(
+    () => documents.filter(d => selectedIds.includes(d.id) && d.status === "ready"),
+    [documents, selectedIds]
+  );
+  const researchHref = useMemo(() => {
+    if (selectedReady.length < MULTI_DOC_MIN) return null;
+    return `/research?docs=${selectedReady.map(d => d.id).join(",")}`;
+  }, [selectedReady]);
+
+  function toggleSelect(id: string, status: string) {
+    if (status !== "ready") return;
+    setSelectedIds(prev => {
+      if (prev.includes(id)) return prev.filter(x => x !== id);
+      if (prev.length >= MULTI_DOC_MAX) {
+        setError(`Select at most ${MULTI_DOC_MAX} documents for comparative analysis.`);
+        return prev;
+      }
+      setError(null);
+      return [...prev, id];
+    });
+  }
+
   return <div className="app-shell">
     <header className="topbar">
       <div className="brand"><div className="brand-glyph" aria-hidden="true">P</div><div>
@@ -122,11 +149,35 @@ export default function LibraryHome() {
         </section>
         {error && <div className="error-banner" role="alert"><b>Action needed:</b> {error}</div>}
         <section className="library-section"><div className="section-heading"><div><div className="eyebrow">WORKSPACE / FILES</div>
-          <h2>Document library <span className="count">{documents.length}</span></h2></div><button className="button minimal" onClick={()=>void refresh()}>↻ Refresh</button></div>
+          <h2>Document library <span className="count">{documents.length}</span></h2></div>
+          <div className="library-heading-actions">
+            <span className="selection-count" aria-live="polite">
+              {selectedReady.length} selected
+            </span>
+            {researchHref ? (
+              <Link className="button primary" href={researchHref}>
+                Compare selected ↗
+              </Link>
+            ) : (
+              <button className="button primary" type="button" disabled title={`Select ${MULTI_DOC_MIN}–${MULTI_DOC_MAX} ready documents`}>
+                Compare selected
+              </button>
+            )}
+            <button className="button minimal" onClick={()=>void refresh()}>↻ Refresh</button>
+          </div></div>
           {loading ? <div className="empty">Loading stored documents…</div> : documents.length===0 ?
             <div className="empty"><div className="empty-icon">▤</div><b>Nothing to review yet</b>
               <span>Your uploaded contracts will appear here, ready for evidence inspection.</span></div> :
-            <div className="document-list">{documents.map(doc=><article key={doc.id} className="document-row">
+            <div className="document-list">{documents.map(doc=><article key={doc.id} className={`document-row${selectedIds.includes(doc.id)?" is-selected":""}`}>
+              <label className="doc-select">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.includes(doc.id)}
+                  disabled={doc.status !== "ready"}
+                  onChange={() => toggleSelect(doc.id, doc.status)}
+                  aria-label={`Select ${doc.name} for comparison`}
+                />
+              </label>
               <div className="doc-icon">{doc.mime_type === "application/pdf" ? "PDF" : "DOC"}</div>
               <div className="document-info"><b>{doc.name}</b>
                 <span>{sizeLabel(doc.size_bytes)} <span className="separator">·</span> {new Date(doc.created_at).toLocaleDateString()}
@@ -140,6 +191,9 @@ export default function LibraryHome() {
               )}
               <button className="button minimal delete" onClick={()=>void deleteDocument(doc.id)} aria-label={`Delete ${doc.name}`}>×</button>
             </article>)}</div>}
+          <p className="minor-hint">
+            Select {MULTI_DOC_MIN}–{MULTI_DOC_MAX} ready documents, then compare across contracts. Single-document inspect remains available.
+          </p>
           {hasProblems && <p className="minor-hint">Failed uploads can be removed and replaced with corrected files.</p>}
         </section>
       </div>

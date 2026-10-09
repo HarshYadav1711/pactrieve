@@ -135,6 +135,96 @@ export function findLiteralQuotedEvidence(
   return out;
 }
 
+/**
+ * Resolve citations for a multi-document registry.
+ * Each evidence ID verifies ONLY against its own document's canonical source —
+ * never against sibling selected documents, even when quote text is identical.
+ */
+export function resolveCitationsMulti(
+  sourcesByDocumentId: ReadonlyMap<string, CanonicalSource>,
+  registry: EvidenceItem[],
+  answerText: string
+): CitationResolution {
+  const referenced = extractReferencedEvidenceIds(answerText);
+  const citations: VerifiedCitation[] = [];
+  const rejectedEvidenceIds: string[] = [];
+  const cited = new Set<string>();
+
+  for (const id of referenced) {
+    const item = getEvidenceById(registry, id);
+    if (!item) {
+      rejectedEvidenceIds.push(id);
+      continue;
+    }
+    const source = sourcesByDocumentId.get(item.documentId);
+    if (!source) {
+      rejectedEvidenceIds.push(id);
+      continue;
+    }
+    const recheck = verifyQuote(source, item.quote);
+    if (!recheck.verified || !recheck.occurrences.length) {
+      rejectedEvidenceIds.push(id);
+      continue;
+    }
+    const occ =
+      recheck.occurrences.find(o => o.start === item.startOffset && o.end === item.endOffset) ??
+      recheck.occurrences[0];
+    if (cited.has(id)) continue;
+    cited.add(id);
+    citations.push({
+      evidenceId: id,
+      documentId: item.documentId,
+      quote: occ.exactSourceText,
+      startOffset: occ.start,
+      endOffset: occ.end,
+      pageIndices: occ.pageIndices,
+      sectionLabel: item.sectionLabel,
+      occurrenceIndex: occ.occurrenceIndex,
+      verified: true
+    });
+  }
+
+  return {
+    citations,
+    rejectedEvidenceIds,
+    hasUnsupportedCitations: rejectedEvidenceIds.length > 0
+  };
+}
+
+/** Literal-quote fallback scoped per evidence item's own document. */
+export function findLiteralQuotedEvidenceMulti(
+  sourcesByDocumentId: ReadonlyMap<string, CanonicalSource>,
+  registry: EvidenceItem[],
+  answerText: string
+): VerifiedCitation[] {
+  const out: VerifiedCitation[] = [];
+  for (const item of registry) {
+    const source = sourcesByDocumentId.get(item.documentId);
+    if (!source) continue;
+    const needle = item.quote.length <= 80 ? item.quote : item.quote.slice(0, 80);
+    if (!answerText.includes(needle.trim()) && !normalizeWs(answerText).includes(normalizeWs(needle))) {
+      continue;
+    }
+    const recheck = verifyQuote(source, item.quote);
+    if (!recheck.verified || !recheck.occurrences.length) continue;
+    const occ =
+      recheck.occurrences.find(o => o.start === item.startOffset && o.end === item.endOffset) ??
+      recheck.occurrences[0];
+    out.push({
+      evidenceId: item.id,
+      documentId: item.documentId,
+      quote: occ.exactSourceText,
+      startOffset: occ.start,
+      endOffset: occ.end,
+      pageIndices: occ.pageIndices,
+      sectionLabel: item.sectionLabel,
+      occurrenceIndex: occ.occurrenceIndex,
+      verified: true
+    });
+  }
+  return out;
+}
+
 function normalizeWs(s: string): string {
   return s.replace(/\s+/g, " ").trim();
 }

@@ -20,3 +20,8 @@ export {
 export {createMemoryConversationStore, type MemoryConversationStore} from "./memory.ts";
 export {createSupabaseConversationStore} from "./supabase.ts";
 export {runDurableGroundedChat, type DurableChatInput, type DurableChatResult} from "./durable.ts";
+export {
+  runDurableMultiDocChat,
+  type DurableMultiChatInput,
+  type DurableMultiChatResult
+} from "./durable-multi.ts";

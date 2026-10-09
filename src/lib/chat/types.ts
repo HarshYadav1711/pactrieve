@@ -8,15 +8,39 @@ export const chatQuestionSchema = z.object({
 
 export type ChatQuestionInput = z.infer<typeof chatQuestionSchema>;
 
+/** Multi-document research chat (Phase 7). Min 2 / max 5 ready documents. */
+export const MULTI_DOC_MIN = 2;
+export const MULTI_DOC_MAX = 5;
+
+export const multiDocChatSchema = z.object({
+  question: z.string().trim().min(1, "Question cannot be empty.").max(2000, "Question exceeds 2,000 characters."),
+  documentIds: z
+    .array(z.string().uuid("Invalid document ID."))
+    .min(MULTI_DOC_MIN, `Select at least ${MULTI_DOC_MIN} documents.`)
+    .max(MULTI_DOC_MAX, `Select at most ${MULTI_DOC_MAX} documents.`),
+  conversationId: z.string().uuid().optional()
+});
+
+export type MultiDocChatInput = z.infer<typeof multiDocChatSchema>;
+
 export interface EvidenceItem {
   id: string;
   documentId: string;
+  /** Server-resolved display name for cross-document prompts and UI. */
+  documentName?: string;
   quote: string;
   startOffset: number;
   endOffset: number;
   pageIndices: number[];
   sectionLabel: string | null;
   occurrenceIndex: number;
+}
+
+export interface PerDocumentCoverage {
+  documentId: string;
+  documentName: string;
+  coverage: RetrievalCoverage;
+  evidenceCount: number;
 }
 
 export interface VerifiedCitation {
@@ -59,6 +83,9 @@ export type ChatStreamEvent =
       coverage: RetrievalCoverage;
       truncated: boolean;
       promptChars: number;
+      /** Present for multi-document research answers. */
+      perDocument?: PerDocumentCoverage[];
+      documentIds?: string[];
     }
   | {type: "generation_started"; assistantMessageId?: string}
   | {type: "answer_delta"; text: string}

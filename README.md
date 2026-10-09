@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 6 DOCX citation navigation implemented (uncommitted — review/commit manually).** Phases 0–5 remain in place (`51fce30` PDF highlighting). Phase 6 adds a semantic DOCX preview with verified-offset highlighting (not pixel-perfect Word layout). Multi-document Q&A, comparison, and agentic tools are **not implemented**.
+> **Status: Phase 7 multi-document Q&A implemented (uncommitted — review/commit manually).** Phases 0–6 remain committed through `0253b74` (DOCX highlighting). Select 2–5 ready contracts, ask one comparative question, and inspect per-document verified citations. Clause-level version diffing and agentic tools are **not** implemented.
 
 ## Technology
 
@@ -129,6 +129,9 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | `GET` | `/api/documents/:id/file` | Signed URL (`?redirect=1`) or same-origin file bytes (`?raw=1`) |
 | `GET` | `/api/documents/:id/docx-preview` | Safe semantic DOCX preview AST (DOCX only) |
 | `DELETE` | `/api/documents/:id` | Removes file and DB record (child rows cascade) |
+| `POST` | `/api/research/chat` | Multi-document grounded SSE chat (exact document-set conversations) |
+| `GET`/`POST` | `/api/research/conversations` | List/create multi-document conversations (`?docs=` / body `documentIds`) |
+| `GET` | `/api/research/conversations/:cid` | Load multi-doc history + citations |
 
 ## Finished vs not finished
 
@@ -140,8 +143,9 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | Grounded single-document chat + real SSE streaming | Phase 3 verified (unit + live Groq) |
 | Stop generation / durable chat history | Phase 4 verified (live A/B/C; Groq Stop timing not proven) |
 | PDF citation navigation / highlight | Phase 5 verified (`51fce30`) |
-| DOCX semantic preview / citation highlight | Phase 6 VERIFIED (136 tests + browser: table-cell highlight, resize, long DOCX; PDF regression OK) |
-| Multi-doc Q&A / comparison / Part C | Not started |
+| DOCX semantic preview / citation highlight | Phase 6 VERIFIED (`0253b74`) |
+| Multi-document comparative Q&A | Phase 7 implemented (153 tests; live/browser in phase report) |
+| Clause-level version comparison / Part C agent | Not started (Phases 8–10) |
 | Deployed demo / video / written note | Not started |
 
 ## Checks
@@ -158,6 +162,8 @@ node --env-file=.env.local --experimental-strip-types scripts/phase2-live-retrie
 node --experimental-strip-types scripts/phase3-live-chat.mjs
 # Phase 4 live persistence/stop smoke:
 node --experimental-strip-types scripts/phase4-live-chat.mjs
+# Phase 7 live multi-doc chat (app running + ≥2 ready docs):
+node --experimental-strip-types scripts/phase7-live-multidoc.mjs
 ```
 
 Optional SQL helpers in Supabase:
@@ -167,9 +173,9 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 6 (`feat: add DOCX evidence highlighting and occurrence resolution`).
-2. Phase 7 — cross-document evidence-based analysis.
-3. Comparison; Part C Option 2 agent tools.
+1. Review/commit Phase 7 (`feat: support cross-document evidence-based analysis`).
+2. Phase 8 — clause-level contract comparison.
+3. Part C Option 2 agent tools.
 4. Deployment, screenshots, demo video, technical note.
 
 `postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).

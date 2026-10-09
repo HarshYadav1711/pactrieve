@@ -68,9 +68,22 @@ async function touchConversation(conversationId: string) {
   await db.from("conversations").update({updated_at: new Date().toISOString()}).eq("id", conversationId);
 }
 
+function sameDocumentSet(a: string[], b: string[]): boolean {
+  if (a.length !== b.length) return false;
+  const left = [...a].sort();
+  const right = [...b].sort();
+  return left.every((id, i) => id === right[i]);
+}
+
 export function createSupabaseConversationStore(): ConversationStore {
   return {
     async createConversation(documentId) {
+      return this.createConversationForDocuments([documentId]);
+    },
+
+    async createConversationForDocuments(documentIds) {
+      const unique = [...new Set(documentIds.map(id => id.trim()).filter(Boolean))];
+      if (!unique.length) throw new Error("At least one document ID is required.");
       const db = serverSupabase();
       const {data: conversation, error} = await db
         .from("conversations")
@@ -78,14 +91,17 @@ export function createSupabaseConversationStore(): ConversationStore {
         .select("id,created_at,updated_at")
         .single();
       if (error || !conversation) throw error ?? new Error("Failed to create conversation.");
-      const {error: linkError} = await db.from("conversation_documents").insert({
-        conversation_id: conversation.id,
-        document_id: documentId
-      });
+      const {error: linkError} = await db.from("conversation_documents").insert(
+        unique.map(document_id => ({
+          conversation_id: conversation.id,
+          document_id
+        }))
+      );
       if (linkError) throw linkError;
       return {
         id: conversation.id,
-        documentId,
+        documentId: unique[0]!,
+        documentIds: unique,
         createdAt: conversation.created_at,
         updatedAt: conversation.updated_at,
         messageCount: 0,
@@ -170,6 +186,51 @@ export function createSupabaseConversationStore(): ConversationStore {
       return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
     },
 
+    async listConversationsForDocumentSet(documentIds, limit = DEFAULT_CONVERSATION_LIMIT) {
+      const target = [...new Set(documentIds)];
+      if (!target.length) return [];
+      const db = serverSupabase();
+      // Candidate conversations that include the first document, then filter to exact set.
+      const {data: links, error} = await db
+        .from("conversation_documents")
+        .select("conversation_id")
+        .eq("document_id", target[0]!);
+      if (error) throw error;
+      const candidateIds = [...new Set((links ?? []).map(r => r.conversation_id as string))];
+      const matched: ConversationSummary[] = [];
+      for (const conversationId of candidateIds) {
+        const ids = await this.listConversationDocumentIds(conversationId);
+        if (!sameDocumentSet(ids, target)) continue;
+        const {data: conv} = await db
+          .from("conversations")
+          .select("id,created_at,updated_at")
+          .eq("id", conversationId)
+          .maybeSingle();
+        if (!conv) continue;
+        const {count} = await db
+          .from("messages")
+          .select("id", {count: "exact", head: true})
+          .eq("conversation_id", conversationId);
+        const {data: last} = await db
+          .from("messages")
+          .select("content")
+          .eq("conversation_id", conversationId)
+          .order("created_at", {ascending: false})
+          .limit(1)
+          .maybeSingle();
+        matched.push({
+          id: conv.id,
+          documentId: ids[0]!,
+          documentIds: ids,
+          createdAt: conv.created_at,
+          updatedAt: conv.updated_at,
+          messageCount: count ?? 0,
+          preview: last?.content ? String(last.content).slice(0, 120) : null
+        });
+      }
+      return matched.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, limit);
+    },
+
     async getConversation(conversationId, documentId, messageLimit = DEFAULT_MESSAGE_LIMIT) {
       if (!(await this.assertConversationDocument(conversationId, documentId))) return null;
       await this.recoverStaleInConversation(conversationId, STALE_GENERATION_MS);
@@ -181,6 +242,8 @@ export function createSupabaseConversationStore(): ConversationStore {
         .maybeSingle();
       if (error) throw error;
       if (!conv) return null;
+
+      const documentIds = await this.listConversationDocumentIds(conversationId);
 
       const {data: msgRows, error: msgError} = await db
         .from("messages")
@@ -213,11 +276,22 @@ export function createSupabaseConversationStore(): ConversationStore {
 
       return {
         id: conv.id,
-        documentId,
+        documentId: documentIds[0] ?? documentId,
+        documentIds,
         createdAt: conv.created_at,
         updatedAt: conv.updated_at,
         messages
       } satisfies ConversationDetail;
+    },
+
+    async listConversationDocumentIds(conversationId) {
+      const db = serverSupabase();
+      const {data, error} = await db
+        .from("conversation_documents")
+        .select("document_id")
+        .eq("conversation_id", conversationId);
+      if (error) throw error;
+      return (data ?? []).map(r => r.document_id as string);
     },
 
     async assertConversationDocument(conversationId, documentId) {
@@ -230,6 +304,11 @@ export function createSupabaseConversationStore(): ConversationStore {
         .maybeSingle();
       if (error) throw error;
       return Boolean(data);
+    },
+
+    async assertConversationExactDocuments(conversationId, documentIds) {
+      const linked = await this.listConversationDocumentIds(conversationId);
+      return sameDocumentSet(linked, documentIds);
     },
 
     async appendUserMessage(conversationId, documentId, content) {
@@ -399,12 +478,17 @@ export function createSupabaseConversationStore(): ConversationStore {
       }
 
       // Replace citations only when this finalize won the race.
+      // Each citation keeps its own document_id (required for multi-document answers).
       await db.from("citations").delete().eq("message_id", input.messageId);
-      const cites = (input.citations ?? []).filter(c => c.documentId === input.documentId && c.verified);
+      const linkedDocs = await this.listConversationDocumentIds(input.conversationId);
+      const linked = new Set(linkedDocs);
+      const cites = (input.citations ?? []).filter(
+        c => c.verified && linked.has(c.documentId)
+      );
       if (cites.length) {
         const rows = cites.map(c => ({
           message_id: input.messageId,
-          document_id: input.documentId,
+          document_id: c.documentId,
           source_start: c.startOffset,
           source_end: c.endOffset,
           quote: c.quote,
