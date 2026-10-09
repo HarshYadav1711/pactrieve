@@ -4,17 +4,17 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail: `do
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-Evidence gates for this update (2026-10-09 — Phase 7 working tree, **not yet user-committed**):
+Evidence gates for this update (2026-10-09 — Phase 8 working tree, **not yet user-committed**):
 
-Phase 4–6 remain VERIFIED (committed `eb0c3f8` / `51fce30` / `0253b74`). Live Groq Stop timing **not** proven.
+Phase 4–7 remain VERIFIED (committed through `cfa8140`). Live Groq Stop timing **not** proven.
 
-Phase 7 gates:
+Phase 8 gates:
 
 - `npm run typecheck` — pass
-- `npm test` — **153/153** pass (adds `multi-doc.test.mts`)
-- `npm run build` — pass (includes `/api/research/*` + `/research`)
-- Live Groq: alpha (30d / AED 100,000) vs beta (60d / AED 1,000,000) comparative answer with per-doc citations (~23s)
-- Browser: reopen multi-doc conversation; click Alpha citation → Alpha DOCX preview highlight (geometry banners OK)
+- `npm test` — **174/174** pass (adds `compare.test.mts`)
+- `npm run build` — pass (includes `/api/compare` + `/compare`)
+- Live Supabase: alpha (30d / AED 100,000) vs beta (60d / AED 1,000,000) → 2 `modified`; amounts preserved; self-compare 400; invalid ID 400
+- Browser: Compare Versions auto-run; side-by-side modified ledger; Show in original/revised → DOCX SourceFocus highlight on correct document
 
 | ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -36,12 +36,14 @@ Phase 7 gates:
 | B1 | PDF citation navigation / highlight | VERIFIED | PdfCitationViewer, src/lib/pdf/* | pdf-citation.test.mts + browser | Pathological PDF text order may fail align | 5 |
 | B1b | DOCX citation navigation / highlight | VERIFIED | DocxCitationViewer, src/lib/docx/* | docx-citation.test.mts + browser | Not Word page-fidelity; headers/footers limited | 6 |
 | B2 | Multi-document questions / comparative synthesis | VERIFIED | multi-pipeline, research APIs, MultiDocumentChat, /research | multi-doc.test.mts + live Groq + browser | Selection 2–5; lexical miss ≠ absence; not clause-level version diff | 7 |
-| B3 / C2 | Version compare / agent | NOT_STARTED | — | — | Phases 8–10 | 8–10 |
+| B3 | Document version comparison (structural) | PARTIAL | compare/*, /api/compare, /compare, VersionCompareLedger | compare.test.mts + live + browser | Structural alignment only; significance/severity = Phase 9; full Part B not VERIFIED | 8 |
+| C2 | Agentic research tools | NOT_STARTED | — | — | Phase 10 | 10 |
 | SUB* | Submission deliverables | PARTIAL / NOT_STARTED | README | — | Screenshots/video/deploy pending | 12–13 |
 
-## Phase 7 notes
+## Phase 8 notes
 
-- Evidence IDs are unique across the selected set; verification never searches sibling documents.
-- Conversation associations use existing `conversation_documents` with exact-set locking.
-- Not clause-level version diffing (Phase 8) and not agentic tool loops (Phase 10).
-- Fixtures: `fixtures/phase7-alpha.docx`, `fixtures/phase7-beta.docx`.
+- Clause/paragraph alignment with source offsets; not character-diff UI.
+- `moved` only when near-identical text relocates with sufficient confidence.
+- Coverage notes surface empty/partially unreadable sources; do not invent deletions from unread pages.
+- Phase 9 will add substantive explanations and severity sorting — do not claim B3 fully VERIFIED until then.
+- Fixtures reused: `fixtures/phase7-alpha.docx`, `fixtures/phase7-beta.docx`.

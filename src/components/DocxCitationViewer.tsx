@@ -1,7 +1,7 @@
 "use client";
 
 import {useCallback, useEffect, useRef, useState} from "react";
-import type {VerifiedCitation} from "@/lib/chat/types";
+import type {SourceFocus} from "@/lib/compare/types";
 import type {DocxBlock, DocxInline, DocxLeafHighlight, DocxPreviewModel} from "@/lib/docx";
 import {locateCitationOnDocx} from "@/lib/docx/locate";
 
@@ -17,9 +17,9 @@ export type DocxViewerNavStatus =
 type Props = {
   documentId: string;
   canonicalText: string;
-  citation: VerifiedCitation | null;
+  citation: SourceFocus | null;
   onStatus?: (status: DocxViewerNavStatus) => void;
-  onAlignFailed?: (citation: VerifiedCitation) => void;
+  onAlignFailed?: (citation: SourceFocus) => void;
 };
 
 type OverlayRect = {left: number; top: number; width: number; height: number};
@@ -117,7 +117,7 @@ export default function DocxCitationViewer({
   }, []);
 
   const navigateCitation = useCallback(
-    (cite: VerifiedCitation, model: DocxPreviewModel) => {
+    (cite: SourceFocus, model: DocxPreviewModel) => {
       report({kind: "highlighting"});
       setAlignNotice(null);
       setOverlays([]);

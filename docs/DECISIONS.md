@@ -1,5 +1,17 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 8 clause-level version comparison
+
+- **Decision:** Compute comparison **on the fly** from canonical text (`getDocumentSource`). No new comparison tables or migrations.
+- **Decision:** Dedicated `/compare` workspace and `POST /api/compare` — separate from Phase 7 multi-document research Q&A (`/research`).
+- **Decision:** Segmentation prefers `detectSections` legal headings, then paragraph fallback; soft-split oversized blocks. Retrieval chunks are **not** treated as legal clauses.
+- **Decision:** Alignment is deterministic and bounded: Stage A unique structural keys require text similarity ≥ `STRUCTURAL_FLOOR` (0.58) so renumbering cannot force weak pairs; Stage B/C order window + near-exact move scan; Stage D unmatched → added/removed. Cap `MAX_CANDIDATE_PAIRS` at 25k.
+- **Decision:** Classifications: `unchanged` / `modified` / `added` / `removed` / `moved` / `uncertain`. Safe whitespace normalization only — `shall`/`may`, amounts, and party names remain distinct.
+- **Decision:** Source navigation uses `SourceFocus` (documentId + UTF-16 offsets) into existing PDF/DOCX viewers — not fake `VerifiedCitation` / AI-verified labels.
+- **Decision:** Phase 8 left **uncommitted** for manual user review. Phase 9 significance/severity deferred.
+- **Observation:** Live API alpha→beta: 2 `modified` (30→60 days; AED 100,000→1,000,000), amounts preserved, ~5ms align after load. Browser PASS: ledger + original/revised DOCX SourceFocus highlights. Unit suite **174/174**; typecheck + build pass (`/compare`, `/api/compare`). Large synthetic (~120 clauses) bound &lt;8s / candidatePairs &lt;30k in unit test.
+- **Limitation:** Split/merge may surface as conservative add/remove/modified rather than explicit multi-block links. Duplicate boilerplate can remain uncertain. No severity scoring (Phase 9). Unreadable extraction never counted as confirmed deletion.
+
 ## 2026-10-09 — Phase 7 multi-document comparative Q&A
 
 - **Decision:** Reuse existing `conversation_documents` (no new tables). Conversations for research are exact-set locked: follow-up questions must send the same document ID set.
@@ -9,7 +21,7 @@
 - **Decision:** Comparative system prompt requires a synthesis with similarities/differences; stacking unrelated per-doc summaries is insufficient.
 - **Decision:** Citation persistence stores each citation’s own `document_id` (not only the conversation primary id).
 - **Decision:** UI: library checkboxes → `/research` desk with MultiDocumentChat + switchable PDF/DOCX viewers. Single-document `/documents/:id` chat unchanged.
-- **Decision:** Phase 7 left **uncommitted** for manual user review. No Phase 8 clause-diff work.
+- **Decision:** Phase 7 committed as `cfa8140` after manual review. No Phase 8 clause-diff in that commit.
 - **Observation:** Live Groq PASS on `phase7-alpha` vs `phase7-beta` — comparative notice (30 vs 60 days) and liability (AED 100,000 vs AED 1,000,000) with citations bound to the correct document IDs. Browser PASS: historical conversation reopen + Alpha citation opens Alpha DOCX preview with highlight.
 - **Limitation:** Lexical retrieval may miss provisions; missing evidence ≠ absence. Aggregate coverage notes gaps per document. Live Groq Stop timing still unproven.
 

@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 7 multi-document Q&A implemented (uncommitted — review/commit manually).** Phases 0–6 remain committed through `0253b74` (DOCX highlighting). Select 2–5 ready contracts, ask one comparative question, and inspect per-document verified citations. Clause-level version diffing and agentic tools are **not** implemented.
+> **Status: Phase 8 Compare Versions implemented (uncommitted — review/commit manually).** Phases 0–7 remain committed through `cfa8140` (multi-document research). Select exactly two ready contracts for clause/paragraph alignment, or 2–5 for research Q&A. Substantive significance/severity (Phase 9) and agentic tools are **not** implemented.
 
 ## Technology
 
@@ -132,6 +132,9 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | `POST` | `/api/research/chat` | Multi-document grounded SSE chat (exact document-set conversations) |
 | `GET`/`POST` | `/api/research/conversations` | List/create multi-document conversations (`?docs=` / body `documentIds`) |
 | `GET` | `/api/research/conversations/:cid` | Load multi-doc history + citations |
+| `POST` | `/api/compare` | Clause/paragraph version comparison (`originalDocumentId`, `revisedDocumentId`) |
+
+UI routes: `/` library · `/documents/:id` · `/research` · `/compare`
 
 ## Finished vs not finished
 
@@ -144,8 +147,10 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | Stop generation / durable chat history | Phase 4 verified (live A/B/C; Groq Stop timing not proven) |
 | PDF citation navigation / highlight | Phase 5 verified (`51fce30`) |
 | DOCX semantic preview / citation highlight | Phase 6 VERIFIED (`0253b74`) |
-| Multi-document comparative Q&A | Phase 7 implemented (153 tests; live/browser in phase report) |
-| Clause-level version comparison / Part C agent | Not started (Phases 8–10) |
+| Multi-document comparative Q&A | Phase 7 VERIFIED (`cfa8140`) |
+| Clause-level version comparison (structural) | Phase 8 implemented (174 tests; live/browser in phase report) — significance deferred to Phase 9 |
+| Substantive change explanations / severity | Not started (Phase 9) |
+| Part C agent tools | Not started (Phase 10) |
 | Deployed demo / video / written note | Not started |
 
 ## Checks
@@ -164,6 +169,8 @@ node --experimental-strip-types scripts/phase3-live-chat.mjs
 node --experimental-strip-types scripts/phase4-live-chat.mjs
 # Phase 7 live multi-doc chat (app running + ≥2 ready docs):
 node --experimental-strip-types scripts/phase7-live-multidoc.mjs
+# Phase 8 live version compare (app running + phase7-alpha/beta ready):
+node scripts/phase8-live-compare.mjs
 ```
 
 Optional SQL helpers in Supabase:
@@ -173,8 +180,8 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 7 (`feat: support cross-document evidence-based analysis`).
-2. Phase 8 — clause-level contract comparison.
+1. Review/commit Phase 8 (`feat: compare contract versions at clause level` or similar).
+2. Phase 9 — substantive change explanations and severity.
 3. Part C Option 2 agent tools.
 4. Deployment, screenshots, demo video, technical note.
 

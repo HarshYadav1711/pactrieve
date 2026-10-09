@@ -2,7 +2,7 @@
 
 import {useCallback, useEffect, useMemo, useRef, useState, type MutableRefObject} from "react";
 import type {PageBoundary} from "@/lib/evidence/verify";
-import type {VerifiedCitation} from "@/lib/chat/types";
+import type {SourceFocus} from "@/lib/compare/types";
 import {
   locateCitationOnPdf,
   pageIndicesForRange,
@@ -38,7 +38,8 @@ type Props = {
   documentId: string;
   pages: PageBoundary[];
   sourceText: string;
-  citation: VerifiedCitation | null;
+  /** Verified citation or comparison source focus — offsets must be source-derived. */
+  citation: SourceFocus | null;
   onStatus?: (status: ViewerNavStatus) => void;
 };
 
@@ -186,7 +187,7 @@ export default function PdfCitationViewer({documentId, pages, sourceText, citati
   }, []);
 
   const navigateCitation = useCallback(
-    async (cite: VerifiedCitation) => {
+    async (cite: SourceFocus) => {
       if (!pdfRef.current) return;
       report({kind: "highlighting"});
       setAlignNotice(null);
@@ -194,7 +195,7 @@ export default function PdfCitationViewer({documentId, pages, sourceText, citati
       setActiveHighlights([]);
 
       const derivedPages =
-        cite.pageIndices.length > 0
+        cite.pageIndices && cite.pageIndices.length > 0
           ? cite.pageIndices
           : pageIndicesForRange(pages, cite.startOffset, cite.endOffset);
 

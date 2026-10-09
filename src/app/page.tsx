@@ -109,6 +109,10 @@ export default function LibraryHome() {
     if (selectedReady.length < MULTI_DOC_MIN) return null;
     return `/research?docs=${selectedReady.map(d => d.id).join(",")}`;
   }, [selectedReady]);
+  const compareHref = useMemo(() => {
+    if (selectedReady.length !== 2) return null;
+    return `/compare?original=${selectedReady[0]!.id}&revised=${selectedReady[1]!.id}`;
+  }, [selectedReady]);
 
   function toggleSelect(id: string, status: string) {
     if (status !== "ready") return;
@@ -154,13 +158,32 @@ export default function LibraryHome() {
             <span className="selection-count" aria-live="polite">
               {selectedReady.length} selected
             </span>
-            {researchHref ? (
-              <Link className="button primary" href={researchHref}>
-                Compare selected ↗
+            {compareHref ? (
+              <Link className="button primary" href={compareHref}>
+                Compare Versions ↗
               </Link>
             ) : (
-              <button className="button primary" type="button" disabled title={`Select ${MULTI_DOC_MIN}–${MULTI_DOC_MAX} ready documents`}>
-                Compare selected
+              <button
+                className="button subtle"
+                type="button"
+                disabled
+                title="Select exactly two ready documents (original then revised)"
+              >
+                Compare Versions
+              </button>
+            )}
+            {researchHref ? (
+              <Link className="button subtle" href={researchHref}>
+                Research selected ↗
+              </Link>
+            ) : (
+              <button
+                className="button subtle"
+                type="button"
+                disabled
+                title={`Select ${MULTI_DOC_MIN}–${MULTI_DOC_MAX} ready documents for multi-doc Q&A`}
+              >
+                Research selected
               </button>
             )}
             <button className="button minimal" onClick={()=>void refresh()}>↻ Refresh</button>
@@ -192,7 +215,7 @@ export default function LibraryHome() {
               <button className="button minimal delete" onClick={()=>void deleteDocument(doc.id)} aria-label={`Delete ${doc.name}`}>×</button>
             </article>)}</div>}
           <p className="minor-hint">
-            Select {MULTI_DOC_MIN}–{MULTI_DOC_MAX} ready documents, then compare across contracts. Single-document inspect remains available.
+            Select exactly two ready documents for <b>Compare Versions</b> (clause alignment), or {MULTI_DOC_MIN}–{MULTI_DOC_MAX} for multi-document research Q&amp;A. Single-document inspect remains available.
           </p>
           {hasProblems && <p className="minor-hint">Failed uploads can be removed and replaced with corrected files.</p>}
         </section>
