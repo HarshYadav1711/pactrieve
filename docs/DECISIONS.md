@@ -1,5 +1,15 @@
 # Engineering decisions
 
+## 2026-10-10 — Phase 12 Vercel prep and hosted fail-closed gate
+
+- **Decision:** Do not deploy or push without explicit user authorization. Prepare config + local preflight only.
+- **Decision:** On hosted surfaces (`VERCEL=1` or `PACTRIEVE_ENFORCE_ACCESS_GATE`), missing `PACTRIEVE_ACCESS_TOKEN` **fails closed** (503) instead of opening service-role APIs. Local unset remains open for single-user dev.
+- **Decision:** Keep Next.js middleware file despite deprecation warning; cosmetic proxy migration deferred past deadline risk.
+- **Decision:** Use existing Supabase project with synthetic-only demo data; do not create a second project automatically.
+- **Decision:** PDF worker remains `postinstall` copy to `public/` (same-origin); no CDN.
+- **Observation:** Local preflight PASS — enforce-without-token 503; gated unlock Bearer/cookie; PDF worker 200; file `private, no-store`. Suite **220/220**.
+- **Limitation:** Live Vercel URL not yet authorized. Shared token is demo credential, not multi-tenant auth.
+
 ## 2026-10-09 — Phase 11 adversarial QA and public-access gate
 
 - **Decision:** Treat unauthenticated service-role API routes as **P0** for any public URL. Private Storage alone is insufficient.

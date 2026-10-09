@@ -1,23 +1,46 @@
 import {NextResponse} from "next/server";
 import type {NextRequest} from "next/server";
-import {ACCESS_COOKIE, requestHasValidAccess} from "@/lib/access";
+import {
+  ACCESS_COOKIE,
+  accessGateMisconfigured,
+  configuredAccessToken,
+  requestHasValidAccess
+} from "@/lib/access";
 
 /**
- * When PACTRIEVE_ACCESS_TOKEN is configured, block anonymous /api access.
- * Unlock via POST /api/access (sets httpOnly cookie) or Authorization: Bearer.
+ * Protect /api/* on deployments that require the shared access token.
+ * Unlock via POST /api/access (httpOnly cookie) or Authorization: Bearer.
+ *
+ * On Vercel (or PACTRIEVE_ENFORCE_ACCESS_GATE), a missing token fails closed
+ * instead of exposing service-role-backed document APIs.
  */
 export function middleware(request: NextRequest) {
-  const expected = (process.env.PACTRIEVE_ACCESS_TOKEN ?? "").trim();
-  if (!expected) {
-    return NextResponse.next();
-  }
-
   const path = request.nextUrl.pathname;
-  if (path === "/api/access" || path.startsWith("/api/access/")) {
-    return NextResponse.next();
-  }
+  const isAccessRoute = path === "/api/access" || path.startsWith("/api/access/");
 
   if (!path.startsWith("/api/")) {
+    return NextResponse.next();
+  }
+
+  // Always allow the unlock / status route so operators can diagnose misconfig.
+  if (isAccessRoute) {
+    return NextResponse.next();
+  }
+
+  if (accessGateMisconfigured()) {
+    return NextResponse.json(
+      {
+        error:
+          "Deployment access gate is misconfigured. Set PACTRIEVE_ACCESS_TOKEN on this host before serving APIs.",
+        code: "ACCESS_GATE_MISCONFIGURED"
+      },
+      {status: 503, headers: {"Cache-Control": "no-store"}}
+    );
+  }
+
+  const expected = configuredAccessToken();
+  if (!expected) {
+    // Local single-user (non-hosted): open APIs.
     return NextResponse.next();
   }
 

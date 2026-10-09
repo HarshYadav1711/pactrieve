@@ -42,7 +42,9 @@
 
 **Verified:** Port 3003 — no auth → 401; Bearer → 200; cookie unlock after Secure-flag fix → 200.
 
-**Deploy rule:** Any publicly reachable host **must** set `PACTRIEVE_ACCESS_TOKEN` and use only synthetic contracts. Omitting the token on a public URL reopens the P0.
+**Deploy rule:** Any publicly reachable host **must** set `PACTRIEVE_ACCESS_TOKEN` and use only synthetic contracts.
+
+**Phase 12 follow-up:** On Vercel (`VERCEL=1`) or `PACTRIEVE_ENFORCE_ACCESS_GATE`, omitting the token now **fails closed** (503) instead of reopening the P0. See `docs/PHASE12_DEPLOYMENT.md`.
 
 ## Other findings
 

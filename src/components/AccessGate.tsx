@@ -5,11 +5,12 @@ import {FormEvent, useCallback, useEffect, useState} from "react";
 type AccessStatus = {
   required: boolean;
   unlocked: boolean;
+  misconfigured?: boolean;
 };
 
 /**
- * Shared deployment passphrase UI. Shown only when PACTRIEVE_ACCESS_TOKEN is set
- * and APIs return ACCESS_REQUIRED. Not a multi-user account system.
+ * Shared deployment passphrase UI. Shown when the host requires unlock
+ * or when a public host is missing PACTRIEVE_ACCESS_TOKEN. Not multi-user auth.
  */
 export function AccessGate({onUnlocked}: {onUnlocked?: () => void}) {
   const [status, setStatus] = useState<AccessStatus | null>(null);
@@ -23,11 +24,12 @@ export function AccessGate({onUnlocked}: {onUnlocked?: () => void}) {
       const metaJson = (await meta.json()) as AccessStatus;
       setStatus({
         required: Boolean(metaJson.required),
-        unlocked: Boolean(metaJson.unlocked)
+        unlocked: Boolean(metaJson.unlocked),
+        misconfigured: Boolean(metaJson.misconfigured)
       });
-      if (metaJson.required && metaJson.unlocked) onUnlocked?.();
+      if (metaJson.required && metaJson.unlocked && !metaJson.misconfigured) onUnlocked?.();
     } catch {
-      setStatus({required: false, unlocked: true});
+      setStatus({required: false, unlocked: true, misconfigured: false});
     }
   }, [onUnlocked]);
 
@@ -51,7 +53,7 @@ export function AccessGate({onUnlocked}: {onUnlocked?: () => void}) {
         setError(data.error || "Invalid access token.");
         return;
       }
-      setStatus({required: true, unlocked: true});
+      setStatus({required: true, unlocked: true, misconfigured: false});
       setToken("");
       onUnlocked?.();
     } catch {
@@ -61,8 +63,21 @@ export function AccessGate({onUnlocked}: {onUnlocked?: () => void}) {
     }
   }
 
-  if (!status || !status.required || status.unlocked) {
+  if (!status || !status.required || (status.unlocked && !status.misconfigured)) {
     return null;
+  }
+
+  if (status.misconfigured) {
+    return (
+      <div className="error-banner access-gate" role="alert">
+        <b>Deployment access gate misconfigured</b>
+        <p>
+          This host is public but <code>PACTRIEVE_ACCESS_TOKEN</code> is not set. Document APIs
+          stay locked until an operator configures the shared evaluator passphrase in the hosting
+          environment. Synthetic contracts only — not a multi-user login.
+        </p>
+      </div>
+    );
   }
 
   return (

@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 11 release hardening in working tree (uncommitted — review/commit manually).** Phases 0–10 committed through `7c02bbc`. Public deploys **must** set `PACTRIEVE_ACCESS_TOKEN` (shared evaluator passphrase). Use only synthetic contracts on shared hosts.
+> **Status: Phase 12 deployment PREPARED (not deployed).** Phase 11 committed at `c03d802`. Hosted Vercel without `PACTRIEVE_ACCESS_TOKEN` fails closed. See `docs/PHASE12_DEPLOYMENT.md` for the approval-gated deploy checklist.
 
 ## Technology
 
@@ -64,11 +64,12 @@ Open http://localhost:3000 .
 | `LLM_BASE_URL` | Provider base URL (e.g. `https://api.groq.com/openai/v1`) — no trailing slash required |
 | `LLM_MODEL` | Model id supported by that provider |
 | `LLM_TIMEOUT_MS`, `LLM_MAX_TOKENS` | Optional (defaults 45000 ms / 1024 tokens) |
-| `PACTRIEVE_ACCESS_TOKEN` | **Required on any public URL.** Shared deployment passphrase (not multi-user login). When set, `/api/*` needs Bearer token or unlock cookie from `POST /api/access`. Leave unset for local single-user work. |
+| `PACTRIEVE_ACCESS_TOKEN` | **Required on Vercel (Production + Preview).** Shared evaluator passphrase (not multi-user login). When set, `/api/*` needs Bearer or unlock cookie (`POST /api/access`). On Vercel, omitting it **fails closed** (503) instead of exposing documents. Leave unset for local single-user work only. |
+| `PACTRIEVE_ENFORCE_ACCESS_GATE` | Optional local simulation of hosted fail-closed behaviour (`1`/`true`). |
 
 The browser uploads via a short-lived signed token from a server route; raw files go to private Storage. After upload, the process API downloads, validates signatures, extracts text, and stores page/offset mapping and retrieval chunks.
 
-**Security note:** Private Supabase Storage does **not** protect Next.js API routes that use the service-role key. Without `PACTRIEVE_ACCESS_TOKEN`, anonymous callers can list/download/delete documents and burn LLM quota. This is intentional for local demos only.
+**Security note:** Private Supabase Storage does **not** protect Next.js API routes that use the service-role key. Local unset token keeps APIs open for development. Public/Vercel hosts must set a high-entropy `PACTRIEVE_ACCESS_TOKEN`.
 
 **Limitations:** Processing is synchronous (`maxDuration` 120s on process; agent 90s). Dense commercial PDFs may still need durable workers. Assignment requires no full auth platform — the access token is a shared gate, not accounts.
 
@@ -190,11 +191,11 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 11 (`test: harden contract analysis and evidence workflows` or similar).
-2. Phase 12 — live deploy with `PACTRIEVE_ACCESS_TOKEN` set; evaluator smoke on the public URL.
-3. Phase 13 — screenshots, demo video, technical note.
+1. Review/commit Phase 12 fail-closed gate (`fix: fail closed when hosted without access token`).
+2. Explicitly authorize Vercel project + secrets + deploy (`docs/PHASE12_DEPLOYMENT.md`).
+3. Phase 13 — screenshots, demo video, technical note after live acceptance.
 
-Release audit: `docs/PHASE11_RELEASE_AUDIT.md`.
+Release audit: `docs/PHASE11_RELEASE_AUDIT.md` · Deploy handoff: `docs/PHASE12_DEPLOYMENT.md`.
 
 `postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).
 

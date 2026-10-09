@@ -2,7 +2,9 @@ import {NextResponse} from "next/server";
 import {
   ACCESS_COOKIE,
   accessGateEnabled,
+  accessGateMisconfigured,
   configuredAccessToken,
+  describeAccessGate,
   requestHasValidAccess,
   tokensEqual
 } from "@/lib/access";
@@ -10,11 +12,18 @@ import {jsonError, jsonOk} from "@/lib/http";
 
 export const runtime = "nodejs";
 
-/** Whether the optional deployment access gate is enabled (does not reveal the token). */
+/** Access-gate status (does not reveal the token). */
 export async function GET(request: Request) {
-  const required = accessGateEnabled();
-  if (!required) {
-    return jsonOk({required: false, unlocked: true});
+  const described = describeAccessGate();
+  if (described.misconfigured) {
+    return jsonOk({
+      required: true,
+      unlocked: false,
+      misconfigured: true
+    });
+  }
+  if (!described.required) {
+    return jsonOk({required: false, unlocked: true, misconfigured: false});
   }
   const cookieHeader = request.headers.get("cookie") || "";
   const cookieMatch = new RegExp(`(?:^|;\\s*)${ACCESS_COOKIE}=([^;]*)`).exec(cookieHeader);
@@ -22,7 +31,7 @@ export async function GET(request: Request) {
     authorizationHeader: request.headers.get("authorization"),
     cookieValue: cookieMatch ? decodeURIComponent(cookieMatch[1]!) : null
   });
-  return jsonOk({required: true, unlocked});
+  return jsonOk({required: true, unlocked, misconfigured: false});
 }
 
 /**
@@ -30,9 +39,16 @@ export async function GET(request: Request) {
  * Body: { "token": "..." }
  */
 export async function POST(request: Request) {
+  if (accessGateMisconfigured()) {
+    return jsonError(
+      "Deployment access gate is misconfigured. Set PACTRIEVE_ACCESS_TOKEN on this host.",
+      503
+    );
+  }
+
   const expected = configuredAccessToken();
   if (!expected) {
-    return jsonOk({required: false, unlocked: true});
+    return jsonOk({required: false, unlocked: true, misconfigured: false});
   }
 
   let body: unknown;
@@ -50,7 +66,7 @@ export async function POST(request: Request) {
   }
 
   const response = NextResponse.json(
-    {required: true, unlocked: true},
+    {required: true, unlocked: true, misconfigured: false},
     {status: 200, headers: {"Cache-Control": "no-store"}}
   );
   response.cookies.set({
@@ -79,7 +95,11 @@ function cookieShouldBeSecure(request: Request): boolean {
 /** Clear the access cookie (logout of the shared gate). */
 export async function DELETE(request: Request) {
   const response = NextResponse.json(
-    {required: accessGateEnabled(), unlocked: false},
+    {
+      required: accessGateEnabled() || accessGateMisconfigured(),
+      unlocked: false,
+      misconfigured: accessGateMisconfigured()
+    },
     {status: 200, headers: {"Cache-Control": "no-store"}}
   );
   response.cookies.set({

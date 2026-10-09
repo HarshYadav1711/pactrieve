@@ -1,11 +1,14 @@
 /**
- * Optional deployment access gate (not multi-user auth).
+ * Deployment access gate (not multi-user auth).
  *
- * When PACTRIEVE_ACCESS_TOKEN is unset, APIs remain open (local single-user).
- * When set, middleware requires a matching Bearer token or httpOnly cookie
- * before any /api route other than /api/access may proceed.
+ * Local (non-Vercel): when PACTRIEVE_ACCESS_TOKEN is unset, APIs stay open for
+ * single-user development.
  *
- * This does not create accounts. It is a shared demo passphrase for public hosts.
+ * Hosted (VERCEL=1, or PACTRIEVE_ENFORCE_ACCESS_GATE=1): a missing token is a
+ * misconfiguration — APIs fail closed instead of exposing service-role data.
+ *
+ * When the token is set, middleware requires Bearer or httpOnly cookie before
+ * any /api route other than /api/access may proceed.
  */
 
 export const ACCESS_COOKIE = "pactrieve_access";
@@ -18,6 +21,38 @@ export function configuredAccessToken(env: NodeJS.ProcessEnv = process.env): str
 
 export function accessGateEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return configuredAccessToken(env) !== null;
+}
+
+/**
+ * True on Vercel (Production/Preview) or when explicitly enforcing the gate.
+ * Used to fail closed if the shared token was forgotten on a public host.
+ */
+export function isHostedPublicSurface(env: NodeJS.ProcessEnv = process.env): boolean {
+  if ((env.VERCEL ?? "").trim() === "1") return true;
+  const flag = (env.PACTRIEVE_ENFORCE_ACCESS_GATE ?? "").trim().toLowerCase();
+  return flag === "1" || flag === "true" || flag === "yes";
+}
+
+/** Hosted without a token — must not silently open privileged APIs. */
+export function accessGateMisconfigured(env: NodeJS.ProcessEnv = process.env): boolean {
+  return isHostedPublicSurface(env) && !accessGateEnabled(env);
+}
+
+export type AccessGateStatus = {
+  required: boolean;
+  unlocked: boolean;
+  /** True when a public host is missing PACTRIEVE_ACCESS_TOKEN. */
+  misconfigured: boolean;
+};
+
+export function describeAccessGate(env: NodeJS.ProcessEnv = process.env): Omit<AccessGateStatus, "unlocked"> {
+  if (accessGateMisconfigured(env)) {
+    return {required: true, misconfigured: true};
+  }
+  if (accessGateEnabled(env)) {
+    return {required: true, misconfigured: false};
+  }
+  return {required: false, misconfigured: false};
 }
 
 /** Constant-time string equality for tokens of known length. */

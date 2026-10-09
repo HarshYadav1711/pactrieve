@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 import {describe, it} from "node:test";
 import {
   accessGateEnabled,
+  accessGateMisconfigured,
   configuredAccessToken,
+  describeAccessGate,
   extractBearerToken,
+  isHostedPublicSurface,
   publicServerError,
   requestHasValidAccess,
   tokensEqual
@@ -79,5 +82,23 @@ describe("deployment access gate", () => {
 
   it("whitespace-only access env does not enable the gate", () => {
     assert.equal(accessGateEnabled({PACTRIEVE_ACCESS_TOKEN: "   "}), false);
+  });
+
+  it("hosted public surface fails closed when token is missing", () => {
+    assert.equal(isHostedPublicSurface({}), false);
+    assert.equal(isHostedPublicSurface({VERCEL: "1"}), true);
+    assert.equal(isHostedPublicSurface({PACTRIEVE_ENFORCE_ACCESS_GATE: "true"}), true);
+    assert.equal(accessGateMisconfigured({VERCEL: "1"}), true);
+    assert.equal(accessGateMisconfigured({VERCEL: "1", PACTRIEVE_ACCESS_TOKEN: "x"}), false);
+    assert.equal(accessGateMisconfigured({}), false);
+    assert.deepEqual(describeAccessGate({VERCEL: "1"}), {
+      required: true,
+      misconfigured: true
+    });
+    assert.deepEqual(describeAccessGate({PACTRIEVE_ACCESS_TOKEN: "tok"}), {
+      required: true,
+      misconfigured: false
+    });
+    assert.deepEqual(describeAccessGate({}), {required: false, misconfigured: false});
   });
 });

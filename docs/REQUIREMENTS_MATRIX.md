@@ -4,20 +4,18 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail: `do
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-Evidence gates for this update (2026-10-09 — Phase 11 working tree, **not yet user-committed**):
+Evidence gates for this update (2026-10-10 — Phase 12 PREPARED, **deploy not authorized**):
 
-Phase 0–10 committed through `7c02bbc`. Live Groq Stop timing **not** proven.
+Phase 0–11 committed through `c03d802`. Live Groq Stop timing **not** proven. Live Vercel URL **not** created.
 
-Phase 11 gates:
+Phase 12 local gates:
 
 - `npm run typecheck` — pass
-- `npm test` — **219/219** pass (adds `access.test.mts`)
-- `npm run build` — pass (`/api/access`; middleware deprecation warning noted)
-- Public API P0 addressed via optional `PACTRIEVE_ACCESS_TOKEN` (required for public hosts)
-- Production-mode smoke on `:3002`; gated unlock verified on `:3003`
-- Browser: library → select α/β → Agent Research + DOCX preview
-- Sparse 150-page local extract ~668ms (not dense commercial proof)
-- Full audit: `docs/PHASE11_RELEASE_AUDIT.md`
+- `npm test` — **220/220** pass (hosted fail-closed tests)
+- `npm run build` — pass
+- Hosted missing-token → **503** (`PACTRIEVE_ENFORCE_ACCESS_GATE`); gated unlock Bearer/cookie PASS
+- Pages remain client shells (no privileged SSR document data)
+- Handoff: `docs/PHASE12_DEPLOYMENT.md`
 
 | ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -41,11 +39,12 @@ Phase 11 gates:
 | B2 | Multi-document questions / comparative synthesis | VERIFIED | multi-pipeline, research APIs, MultiDocumentChat, /research | multi-doc.test.mts + live Groq + browser | Selection 2–5; lexical miss ≠ absence | 7 |
 | B3 | Document version comparison | VERIFIED | compare/*, significance/*, /api/compare, /compare, VersionCompareLedger | compare + significance + live + browser | Heuristic significance ≠ legal certainty; enrichment optional | 8–9 |
 | C2 | Agentic document research | VERIFIED | agent/*, /api/agent/*, /agent, AgentResearchChat | agent.test.mts + live Groq + browser | Activity timeline not durable; live Stop timing vs Groq tool rounds unproven; incomplete research disclosed via limitReason | 10 |
-| SEC1 | Public deployment API protection | VERIFIED | middleware, `/api/access`, AccessGate, access tests | access.test.mts + prod :3003 | Gate optional locally; **must** set token on public hosts or P0 reopens | 11 |
-| SUB* | Submission deliverables | PARTIAL / NOT_STARTED | README | — | Screenshots/video/deploy pending | 12–13 |
+| SEC1 | Public deployment API protection | VERIFIED | middleware, `/api/access`, AccessGate, access tests | access.test.mts + :3004/:3005 | Local open OK; Vercel missing token fails closed (503); token required for usable public demo | 11–12 |
+| DEP1 | Live Vercel deployment + evaluator smoke | BLOCKED | — | — | Awaiting user commit/push + explicit deploy authorization | 12 |
+| SUB* | Submission deliverables | PARTIAL / NOT_STARTED | README | — | Screenshots/video/live URL pending | 12–13 |
 
-## Phase 11 notes
+## Phase 12 notes
 
-- Access gate is a shared passphrase, not accounts.
-- Omitting `PACTRIEVE_ACCESS_TOKEN` on a public URL is an operational release blocker.
-- See `docs/PHASE11_RELEASE_AUDIT.md` for P0–P2 register and measurements.
+- Deployment **PREPARED**, not executed. No public URL yet.
+- See `docs/PHASE12_DEPLOYMENT.md` for env checklist and approval steps.
+
