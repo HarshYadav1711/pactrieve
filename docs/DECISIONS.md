@@ -1,5 +1,13 @@
 # Engineering decisions
 
+## 2026-10-10 — Phase 13 submission packaging
+
+- **Decision:** Package README, screenshots, engineering note, demo script, and submission template without new product features.
+- **Decision:** Capture `01` from live URL; feature stills from local production build with synthetic fixtures when live unlock passphrase is unavailable to automation — provenance recorded in `docs/screenshots/README.md`.
+- **Decision:** Demo video left for the user to record; do not invent a video URL.
+- **Observation:** Live anonymous APIs return 401; access gate required; PDF worker 200. Automated suite **220/220**. Engineering note ≈327 words.
+- **Limitation:** Authenticated production workflows not fully re-exercised in Phase 13 without the passphrase; rely on Phase 10–12 evidence + user demo recording.
+
 ## 2026-10-10 — Phase 12 Vercel prep and hosted fail-closed gate
 
 - **Decision:** Do not deploy or push without explicit user authorization. Prepare config + local preflight only.

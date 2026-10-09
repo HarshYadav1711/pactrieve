@@ -2,37 +2,63 @@
 
 **Every answer, traceable.**
 
-Evidence-first contract analysis workspace for an SDE engineering assessment.
+Evidence-first legal contract workspace for an SDE hiring assignment: upload PDF/DOCX, ask grounded questions, navigate verified quotations in the original source, compare versions, and run bounded agentic research.
 
-> **Status: Phase 12 deployment PREPARED (not deployed).** Phase 11 committed at `c03d802`. Hosted Vercel without `PACTRIEVE_ACCESS_TOKEN` fails closed. See `docs/PHASE12_DEPLOYMENT.md` for the approval-gated deploy checklist.
+## Live demo
 
-## Technology
+- **Application:** [https://pactrieve.vercel.app](https://pactrieve.vercel.app)
+- **Source:** [https://github.com/HarshYadav1711/pactrieve](https://github.com/HarshYadav1711/pactrieve)
+- **Demo video:** _pending upload — see `docs/DEMO_SCRIPT.md`_
+- **Engineering note:** [`docs/ENGINEERING_NOTE.md`](docs/ENGINEERING_NOTE.md)
 
-Next.js (App Router), TypeScript, Supabase Postgres + private Storage, PDF.js, Mammoth, Zod, and a standalone evidence verifier.
+The live site uses a **shared evaluator passphrase** (not multi-user login). Request it through the private submission channel. Use only synthetic contracts.
 
-## Assignment (authoritative)
+## Problem
 
-Requirements come from **SDE Assignment.pdf**. Traceability and governance live in:
+Contract Q&A systems often invent quotes or page numbers. Pactrieve separates **interpretation** (LLM) from **evidence** (deterministic verification against canonical extracted text with stable offsets).
 
-- `AGENTS.md` — Cursor/agent reading order and invariants
-- `docs/rules.md` / `PRD.md` / `Architecture.md` / `Design.md` / `phases.md` — product and phase governance
-- `docs/ASSIGNMENT_SOURCE.md` — assignment summary and source path
-- `docs/REQUIREMENTS_MATRIX.md` — requirement IDs and implementation status
-- `docs/PROJECT_CONTEXT.md` — current state and next phase
-- `docs/DECISIONS.md` — engineering decisions
-- `docs/starter-import/` — original starter README / context preserved at import time
+## Capabilities
 
-**Part C choice:** Option 2 — agentic document research (Phase 10 implemented; review/commit manually).
+| Mode | What it does |
+| --- | --- |
+| **Library** | PDF/DOCX upload, processing states, delete, private originals |
+| **Inspect / Ask** | Single-document grounded chat, SSE streaming, Stop + persisted partials, verified citations |
+| **Ask Documents** | 2–5 docs, comparative answers, per-document evidence IDs |
+| **Compare Versions** | Clause alignment, substantive summaries, severity filter/sort, SourceFocus |
+| **Agent Research** | Model-selected tools (`search_documents`, `inspect_passage`, `list_document_sections`), activity timeline, verified final answer |
 
-> Governance documents are specifications and process controls. They do **not** prove features are implemented. See the requirements matrix for evidence-backed status.
+## Architecture (short)
 
-## Requirements
+1. Browser uploads via short-lived signed Supabase Storage URLs.  
+2. Server extracts text → canonical source + page/offset map → retrieval chunks.  
+3. Chat/agent retrieve passages → build evidence registry (`e1`…) → stream LLM → **independently verify** cited quotes → persist.  
+4. Viewers map verified offsets onto PDF.js / DOCX semantic previews.
 
-- Node.js 22.16+ (Node 24.x also used for Phase 0 validation)
-- A Supabase project and a **private** Storage bucket named `pactrieve-documents`
-- Windows PowerShell or any standard terminal
+Literal quote match ≠ legal entailment. Insufficient coverage abstains rather than inventing absence.
+
+## Stack
+
+Next.js 16 (App Router) · TypeScript · Supabase Postgres + private Storage · PDF.js · Mammoth · Zod · OpenAI-compatible LLM (Groq in this deployment)
+
+## Screenshots
+
+![Live library with access gate](docs/screenshots/01-live-library-access-gate.png)
+
+![Document library](docs/screenshots/02-local-document-library.png)
+
+![DOCX citation highlight](docs/screenshots/03-local-chat-verified-citations.png)
+
+![Multi-document verified cites](docs/screenshots/05-local-multidoc-research.png)
+
+![Compare Versions + significance](docs/screenshots/04-local-compare-significance.png)
+
+![Agent Research citations](docs/screenshots/07-local-agent-desk.png)
+
+Provenance: [`docs/screenshots/README.md`](docs/screenshots/README.md). Feature stills were captured from the same production build against synthetic fixtures when the live unlock passphrase was unavailable to the automation session; `01` is from the live URL.
 
 ## Local setup
+
+**Node.js ≥ 22.16** (validated on 24.x).
 
 ```powershell
 cd D:\Fun\pactrieve
@@ -40,169 +66,68 @@ Copy-Item .env.example .env.local
 npm install
 ```
 
-1. Open the Supabase SQL editor and execute `db/schema.sql`.
-2. In Supabase Storage, create a **private** bucket named `pactrieve-documents`. Raise the per-file size limit if needed (app accepts up to 30 MB).
-3. Fill `.env.local` from Supabase project settings. The service role key must **never** appear in client bundles, commit history, or screenshots.
-4. Start the app:
+`postinstall` copies `public/pdf.worker.min.mjs` from `pdfjs-dist` (gitignored; required for PDF highlights).
 
-```powershell
-npm run dev
-```
-
-Open http://localhost:3000 .
+1. Supabase SQL: `db/schema.sql`  
+2. Optional helpers: `db/migrations/20261008_phase2_search_helper.sql`, `db/migrations/20261008_phase4_chat_persistence.sql`  
+3. Private Storage bucket `pactrieve-documents` (≤30 MB uploads in app)  
+4. Fill `.env.local` (names below — never commit secrets)  
+5. `npm run dev` → http://localhost:3000  
 
 ### Environment variables
 
-| Name | Use |
-|---|---|
-| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL available to browser |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Publishable/anon key used only for signed upload requests |
-| `SUPABASE_URL` | Server project URL (can match public URL) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only database/storage access. Never expose. |
-| `SUPABASE_STORAGE_BUCKET` | Defaults to `pactrieve-documents` |
-| `LLM_API_KEY` | Server-only API key for an OpenAI-compatible chat provider |
-| `LLM_BASE_URL` | Provider base URL (e.g. `https://api.groq.com/openai/v1`) — no trailing slash required |
-| `LLM_MODEL` | Model id supported by that provider |
-| `LLM_TIMEOUT_MS`, `LLM_MAX_TOKENS` | Optional (defaults 45000 ms / 1024 tokens) |
-| `PACTRIEVE_ACCESS_TOKEN` | **Required on Vercel (Production + Preview).** Shared evaluator passphrase (not multi-user login). When set, `/api/*` needs Bearer or unlock cookie (`POST /api/access`). On Vercel, omitting it **fails closed** (503) instead of exposing documents. Leave unset for local single-user work only. |
-| `PACTRIEVE_ENFORCE_ACCESS_GATE` | Optional local simulation of hosted fail-closed behaviour (`1`/`true`). |
+| Name | Class | Required |
+| --- | --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Public | Yes |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public | Yes |
+| `SUPABASE_URL` | Server | Yes |
+| `SUPABASE_SERVICE_ROLE_KEY` | **Secret** | Yes |
+| `SUPABASE_STORAGE_BUCKET` | Server | No (default `pactrieve-documents`) |
+| `LLM_API_KEY` / `LLM_BASE_URL` / `LLM_MODEL` | **Secret** / server | Yes for chat |
+| `PACTRIEVE_ACCESS_TOKEN` | **Secret** | **Yes on Vercel** |
+| `PACTRIEVE_ENFORCE_ACCESS_GATE` | Server | No (local fail-closed sim) |
 
-The browser uploads via a short-lived signed token from a server route; raw files go to private Storage. After upload, the process API downloads, validates signatures, extracts text, and stores page/offset mapping and retrieval chunks.
+On Vercel, omitting `PACTRIEVE_ACCESS_TOKEN` **fails closed** (APIs return 503). Local unset keeps APIs open for single-user development.
 
-**Security note:** Private Supabase Storage does **not** protect Next.js API routes that use the service-role key. Local unset token keeps APIs open for development. Public/Vercel hosts must set a high-entropy `PACTRIEVE_ACCESS_TOKEN`.
-
-**Limitations:** Processing is synchronous (`maxDuration` 120s on process; agent 90s). Dense commercial PDFs may still need durable workers. Assignment requires no full auth platform — the access token is a shared gate, not accounts.
-
-## Checks
+### Checks
 
 ```powershell
 npm run typecheck
 npm test
 npm run build
+npm start
 ```
-
-Unit tests need no model key or database. They cover monetary hallucinations, precise words, whitespace normalization, cross-page quotes, repeated quotes, wrong-document scoping, unicode offsets, empty quotes, chunking, PDF text reconstruction, grounded chat streaming, invented evidence IDs, and insufficient-evidence abstention.
-
-## Grounded chat (Phase 3)
-
-Pipeline for a ready document:
-
-1. Validate question (1–2000 chars) and document readiness.
-2. Retrieve relevant passages via `retrieveDocument` (not the full contract).
-3. Build a **verified evidence registry** (`e1`…) with `verifyQuote` on canonical text.
-4. Stream an OpenAI-compatible completion that may cite evidence IDs only.
-5. Resolve citations against the registry; reject invented IDs / wrong-document refs.
-6. Emit SSE events: `retrieval_started` → `evidence_prepared` → `generation_started` → `answer_delta*` → `citation*` → `completed` | `error`.
-
-If retrieval coverage cannot support an answer, the API abstains with an explicit insufficient-evidence message (a search miss is **not** proof of absence).
-
-Configure `LLM_*` in `.env.local`, then optionally:
-
-```powershell
-node --experimental-strip-types scripts/phase3-live-chat.mjs
-```
-
-The script loads `.env.local` from the repo root via Node's built-in `process.loadEnvFile` (existing process env vars are preserved for CI/deploy).
-
-## Evidence engine guarantees
-
-`src/lib/evidence/verify.ts`:
-
-1. Builds a canonical concatenation of extracted pages using a single line-break separator.
-2. Normalizes whitespace in both quote and source while retaining a map to source offsets.
-3. Finds **every** literal match; no fuzzy word/value substitutions.
-4. Derives page indices and exact original snippets from canonical source text.
-5. Returns unverified if no occurrence exists. Every call scopes to one document.
-
-**Not guaranteed:** Interpretive correctness of a quote; PDF hyphenation merge; glyph/OCR recovery; physical PDF overlay highlighting.
-
-## Current API
-
-| Method | Route | Result |
-|---|---|---|
-| `GET` | `/api/documents` | Library metadata |
-| `POST` | `/api/documents/initiate` | Validates upload request, issues signed upload token |
-| `POST` | `/api/documents/:id/process` | Downloads, validates and extracts uploaded file |
-| `GET` | `/api/documents/:id/text` | Canonical extracted text and page boundaries |
-| `POST` | `/api/documents/:id/verify` | Deterministically checks a proposed quotation |
-| `POST` | `/api/documents/:id/chat` | Grounded SSE chat stream (persists conversation/messages) |
-| `GET` | `/api/documents/:id/conversations` | List conversations for a document |
-| `POST` | `/api/documents/:id/conversations` | Create a new conversation |
-| `GET` | `/api/documents/:id/conversations/:cid` | Load messages + citations |
-| `POST` | `/api/documents/:id/messages/:mid/stop` | Request Stop (`cancel_requested`) |
-| `GET` | `/api/documents/:id/file` | Signed URL (`?redirect=1`) or same-origin file bytes (`?raw=1`) |
-| `GET` | `/api/documents/:id/docx-preview` | Safe semantic DOCX preview AST (DOCX only) |
-| `DELETE` | `/api/documents/:id` | Removes file and DB record (child rows cascade) |
-| `POST` | `/api/research/chat` | Multi-document grounded SSE chat (exact document-set conversations) |
-| `GET`/`POST` | `/api/research/conversations` | List/create multi-document conversations (`?docs=` / body `documentIds`) |
-| `GET` | `/api/research/conversations/:cid` | Load multi-doc history + citations |
-| `POST` | `/api/compare` | Clause/paragraph version comparison (`originalDocumentId`, `revisedDocumentId`) |
-| `POST` | `/api/agent/research` | Bounded agentic multi-step research SSE (`documentIds`, `question`) |
-| `GET`/`POST` | `/api/agent/conversations` | Agent conversation list/create (`?docs=`) |
-| `GET` | `/api/agent/conversations/:cid` | Load agent conversation + citations |
-
-UI routes: `/` library · `/documents/:id` · `/research` · `/compare` · `/agent`
-
-## Finished vs not finished
-
-| Area | Status |
-| --- | --- |
-| Document upload / extract / library / delete | Phase 1 verified (unit + live Supabase smoke) |
-| Deterministic quote verifier + unit tests | Verified |
-| Structure-aware retrieval + coverage statuses | Phase 2 verified (unit + live retrieval smoke) |
-| Grounded single-document chat + real SSE streaming | Phase 3 verified (unit + live Groq) |
-| Stop generation / durable chat history | Phase 4 verified (live A/B/C; Groq Stop timing not proven) |
-| PDF citation navigation / highlight | Phase 5 verified (`51fce30`) |
-| DOCX semantic preview / citation highlight | Phase 6 VERIFIED (`0253b74`) |
-| Multi-document comparative Q&A | Phase 7 VERIFIED (`cfa8140`) |
-| Clause-level version comparison (structural) | Phase 8 VERIFIED (`f559ae7`) |
-| Substantive change explanations / severity filters | Phase 9 VERIFIED (`025fd88`) |
-| Part C agentic document research | Phase 10 implemented (213 tests; live Groq multi-round + browser in phase report) |
-| Deployed demo / video / written note | Not started |
-
-## Checks
-
-```powershell
-npm run typecheck
-npm test
-npm run build
-# Phase 1 live ingestion (app running):
-node --env-file=.env.local scripts/phase1-live-smoke.mjs
-# Phase 2 live retrieval (no app required):
-node --env-file=.env.local --experimental-strip-types scripts/phase2-live-retrieval.mjs
-# Phase 3 live chat (requires LLM_*; loads .env.local automatically):
-node --experimental-strip-types scripts/phase3-live-chat.mjs
-# Phase 4 live persistence/stop smoke:
-node --experimental-strip-types scripts/phase4-live-chat.mjs
-# Phase 7 live multi-doc chat (app running + ≥2 ready docs):
-node --experimental-strip-types scripts/phase7-live-multidoc.mjs
-# Phase 8 live version compare (app running + phase7-alpha/beta ready):
-node scripts/phase8-live-compare.mjs
-# Phase 9 live significance (+ optional Groq enrich):
-node scripts/phase9-live-significance.mjs
-# Phase 10 live agent research (app running + Groq tool calling + ≥2 ready docs):
-node scripts/phase10-live-agent.mjs
-```
-
-Optional SQL helpers in Supabase:
-
-- `db/migrations/20261008_phase2_search_helper.sql` — FTS candidate helper
-- `db/migrations/20261008_phase4_chat_persistence.sql` — chat status/cancel columns (**required for Phase 4 live history**)
-
-## Next milestones
-
-1. Review/commit Phase 12 fail-closed gate (`fix: fail closed when hosted without access token`).
-2. Explicitly authorize Vercel project + secrets + deploy (`docs/PHASE12_DEPLOYMENT.md`).
-3. Phase 13 — screenshots, demo video, technical note after live acceptance.
-
-Release audit: `docs/PHASE11_RELEASE_AUDIT.md` · Deploy handoff: `docs/PHASE12_DEPLOYMENT.md`.
-
-`postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).
 
 ## Security
 
-- Never store API keys in Git (`.env*` ignored except `.env.example`).
-- `LLM_*` and Supabase service role stay server-side only.
-- Private Storage for originals; HTTP routes have no auth by assignment design.
-- Contract text is untrusted data (prompt-injection delimiters); magic signatures checked after upload.
-- Production hardening (ZIP bombs, malware, rate limits, durable retries) still required.
+- Service-role and LLM keys are server-only (never `NEXT_PUBLIC_*`).  
+- Private Storage does **not** alone protect Next.js APIs — the access gate does.  
+- Shared passphrase is a demo credential, not accounts.  
+- Sensitive file responses use `Cache-Control: private, no-store`.
+
+Deploy notes: [`docs/PHASE12_DEPLOYMENT.md`](docs/PHASE12_DEPLOYMENT.md).
+
+## Engineering decisions
+
+See [`docs/DECISIONS.md`](docs/DECISIONS.md) and the half-page [`docs/ENGINEERING_NOTE.md`](docs/ENGINEERING_NOTE.md). Highlights: independent verifier; structure-aware retrieval; real SSE + durable Stop; PDF/DOCX mapping; deterministic compare + optional grounded enrichment; bounded agent tools.
+
+## Assignment coverage
+
+Traceability: [`docs/REQUIREMENTS_MATRIX.md`](docs/REQUIREMENTS_MATRIX.md).
+
+- **Part A:** Upload, library, grounded streaming chat, Stop/history, verified quotes, large-doc retrieval strategy — VERIFIED (automated + prior live).  
+- **Part B:** PDF/DOCX navigation, multi-doc Q&A, version compare + significance — VERIFIED.  
+- **Part C Option 2:** Agentic multi-round tools — VERIFIED in Phase 10 live Groq; re-run on production during your demo.  
+
+## Known limitations
+
+- No OCR for scanned PDFs.  
+- Sparse 150-page fixture timing ≠ every dense commercial contract under serverless limits.  
+- Clause alignment / significance are heuristics, not legal advice.  
+- Agent activity timeline is stream-ephemeral (final answer + citations persist).  
+- Live Groq Stop abort timing not separately proven.  
+- Demo video URL not yet attached.
+
+## Demo recording
+
+Follow [`docs/DEMO_SCRIPT.md`](docs/DEMO_SCRIPT.md) (~4:30). Submission text: [`docs/SUBMISSION_TEMPLATE.md`](docs/SUBMISSION_TEMPLATE.md).

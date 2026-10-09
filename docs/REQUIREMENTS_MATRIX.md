@@ -4,47 +4,30 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail: `do
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-Evidence gates for this update (2026-10-10 — Phase 12 PREPARED, **deploy not authorized**):
+Evidence gates for this update (2026-10-10 — Phase 13 packaging, **docs uncommitted**):
 
-Phase 0–11 committed through `c03d802`. Live Groq Stop timing **not** proven. Live Vercel URL **not** created.
+- HEAD at start: `28844d7` · Live: https://pactrieve.vercel.app  
+- `npm run typecheck` / `npm test` (**220/220**) / `npm run build` — pass  
+- Production anonymous: home 200 · `/api/access` required · `/api/documents` **401** · PDF worker 200  
+- Authenticated live chat/compare/agent: **not retested in Phase 13** (no passphrase in agent env); prior Phase 10–12 + local screenshots  
+- Demo video: **not uploaded**
 
-Phase 12 local gates:
+| ID | Feature | Status | Tests / evidence | Known limitations | Phase |
+| --- | --- | --- | --- | --- | --- |
+| A1–A5 | Upload, extract, status, scan fail, library | VERIFIED | validate/extract tests + fixtures | OCR unsupported | 1 |
+| A6–A7 | Grounded chat + streaming | VERIFIED | chat tests + prior live Groq | — | 3 |
+| A8–A9 | Stop + history | VERIFIED | persist tests | Live Groq Stop timing unproven | 4 |
+| A10–A15 | Verified quotes, abstain, large-doc | VERIFIED | evidence/retrieval/chat | Sparse≠dense PDF timing | 0–3 |
+| B1 / B1b | PDF/DOCX citation nav | VERIFIED | citation tests + screenshots | Exotic PDF order may fail align | 5–6 |
+| B2 | Multi-document Q&A | VERIFIED | multi-doc + screenshot 05 | Selection 2–5 | 7 |
+| B3 | Version compare + significance | VERIFIED | compare/significance + screenshot 04 | Heuristic ≠ legal advice | 8–9 |
+| C2 | Agentic research | VERIFIED | agent tests + Phase 10 live Groq | Re-run on prod in demo; activity not durable | 10 |
+| SEC1 | Public API gate | VERIFIED | access tests + live 401 | Shared passphrase ≠ accounts | 11–12 |
+| DEP1 | Live Vercel deploy | VERIFIED | URL live; anon checks | Full evaluator journey in video | 12 |
+| SUB* | Screenshots / video / note | PARTIAL | screenshots + note ready | **Video URL missing** | 13 |
 
-- `npm run typecheck` — pass
-- `npm test` — **220/220** pass (hosted fail-closed tests)
-- `npm run build` — pass
-- Hosted missing-token → **503** (`PACTRIEVE_ENFORCE_ACCESS_GATE`); gated unlock Bearer/cookie PASS
-- Pages remain client shells (no privileged SSR document data)
-- Handoff: `docs/PHASE12_DEPLOYMENT.md`
+## Demo fixtures
 
-| ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
-| --- | --- | --- | --- | --- | --- | --- |
-| A1 | PDF/DOCX upload; reject other types | VERIFIED | validate, initiate, page | Phase 1 | — | 1 |
-| A2 | Text extraction and persistence | VERIFIED | extract, process | Phase 1 | — | 1 |
-| A3 | Processing status UX | VERIFIED | page, process | Phase 1 | — | 1 |
-| A4 | Scanned / no-text PDF handling | VERIFIED | extract, process | Phase 1 | OCR not supported | 1 |
-| A5 | Document library | VERIFIED | page, APIs | Phase 1 | — | 1 |
-| A6 | Document chat Q&A | VERIFIED | chat pipeline, DocumentChat, chat route | chat + live Groq | — | 3 |
-| A7 | Streaming responses | VERIFIED | openai-compatible, SSE, DocumentChat | chat + live | — | 3 |
-| A8 | Stop generation; keep partial | VERIFIED | persist/*, stop route, DocumentChat | persist.test.mts + live A/B | Crash may lose tokens after last checkpoint; live Groq Stop timing not proven | 4 |
-| A9 | Per-document chat history | VERIFIED | conversations API, DocumentChat | persist tests + live B | Bounded message limit | 4 |
-| A10 | Verified quotes | VERIFIED | verify.ts + chat citations | evidence + chat | Literal match ≠ entailment | 0–3 |
-| A11 | Whitespace-tolerant matching | VERIFIED | normalizeWithSourceMap | evidence | — | 0 |
-| A12 | Reject unverified quotes in answers | VERIFIED | citations.ts, pipeline | chat tests | — | 3 |
-| A13 | Abstain when not in document | VERIFIED | prompts + coverage + pipeline | chat tests | — | 2–3 |
-| A14 | Large documents (~150 pages) strategy | VERIFIED | chunks + retrieval + chat budget | retrieval + chat | Sparse fixture timing ≠ dense PDF | 2–3 |
-| A15 | Partial read ≠ full coverage / no false absence | VERIFIED | retrieval + chat abstention | retrieval + chat | — | 2–3 |
-| B1 | PDF citation navigation / highlight | VERIFIED | PdfCitationViewer, src/lib/pdf/* | pdf-citation.test.mts + browser | Pathological PDF text order may fail align | 5 |
-| B1b | DOCX citation navigation / highlight | VERIFIED | DocxCitationViewer, src/lib/docx/* | docx-citation.test.mts + browser | Not Word page-fidelity; headers/footers limited | 6 |
-| B2 | Multi-document questions / comparative synthesis | VERIFIED | multi-pipeline, research APIs, MultiDocumentChat, /research | multi-doc.test.mts + live Groq + browser | Selection 2–5; lexical miss ≠ absence | 7 |
-| B3 | Document version comparison | VERIFIED | compare/*, significance/*, /api/compare, /compare, VersionCompareLedger | compare + significance + live + browser | Heuristic significance ≠ legal certainty; enrichment optional | 8–9 |
-| C2 | Agentic document research | VERIFIED | agent/*, /api/agent/*, /agent, AgentResearchChat | agent.test.mts + live Groq + browser | Activity timeline not durable; live Stop timing vs Groq tool rounds unproven; incomplete research disclosed via limitReason | 10 |
-| SEC1 | Public deployment API protection | VERIFIED | middleware, `/api/access`, AccessGate, access tests | access.test.mts + :3004/:3005 | Local open OK; Vercel missing token fails closed (503); token required for usable public demo | 11–12 |
-| DEP1 | Live Vercel deployment + evaluator smoke | BLOCKED | — | — | Awaiting user commit/push + explicit deploy authorization | 12 |
-| SUB* | Submission deliverables | PARTIAL / NOT_STARTED | README | — | Screenshots/video/live URL pending | 12–13 |
-
-## Phase 12 notes
-
-- Deployment **PREPARED**, not executed. No public URL yet.
-- See `docs/PHASE12_DEPLOYMENT.md` for env checklist and approval steps.
-
+- `phase7-alpha.docx` — AED 100,000 · 30 days  
+- `phase7-beta.docx` — AED 1,000,000 · 60 days  
+- `phase5-sample.pdf` — PDF highlight path  
