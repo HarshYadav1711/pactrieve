@@ -94,3 +94,21 @@
 .pdf-cite-hl{position:absolute;background:rgba(249,219,114,.55);outline:1px solid #d6af38;mix-blend-mode:multiply;border-radius:1px}
 @media(max-width:768px){.pdf-viewer{max-height:55vh}.pdf-toolbar{gap:6px}.pdf-scroll{padding:10px}}
 @media(prefers-reduced-motion:reduce){.pdf-cite-hl{transition:none}}
+
+/* Phase 6 - DOCX semantic preview */
+.docx-viewer{display:flex;flex-direction:column;min-height:420px;max-height:70vh;background:#fbfaf7}
+.docx-scroll{position:relative;overflow:auto;padding:20px 24px;flex:1;min-height:0}
+.docx-article{position:relative;z-index:1;max-width:52rem;margin:0 auto;color:#24332e;font-family:Georgia,"Times New Roman",serif;font-size:15px;line-height:1.7}
+.docx-p{margin:0 0 1em}
+.docx-h{font-family:Georgia,"Times New Roman",serif;font-weight:600;letter-spacing:-.02em;margin:1.2em 0 .5em;color:#1a2a26}
+.docx-h1{font-size:1.55rem}.docx-h2{font-size:1.35rem}.docx-h3{font-size:1.2rem}
+.docx-list{margin:0 0 1em;padding-left:1.4em}
+.docx-list li{margin:.25em 0}
+.docx-table{width:100%;border-collapse:collapse;margin:0 0 1.1em;font-size:14px}
+.docx-table td,.docx-table th{border:1px solid #d8dedd;padding:8px 10px;vertical-align:top}
+.docx-bold{font-weight:700}.docx-italic{font-style:italic}
+.docx-link{color:#17695f;text-decoration:underline}
+.docx-highlight-layer{position:absolute;inset:0;pointer-events:none;z-index:2}
+.docx-cite-hl{position:absolute;background:rgba(249,219,114,.55);outline:1px solid #d6af38;mix-blend-mode:multiply;border-radius:1px}
+.docx-leaf-active{scroll-margin:48px}
+@media(max-width:768px){.docx-viewer{max-height:55vh}.docx-scroll{padding:14px}}

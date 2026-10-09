@@ -4,19 +4,17 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail: `do
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-Evidence gates for this update (2026-10-09 — Phase 5 working tree, **not yet user-committed**):
+Evidence gates for this update (2026-10-09 — Phase 6 working tree, **not yet user-committed**):
 
-Phase 4 (committed `eb0c3f8`, migration applied) remains VERIFIED:
+Phase 4–5 remain VERIFIED (committed `eb0c3f8` / `51fce30`). Live Groq Stop timing **not** proven.
 
-- Live Phase 4 A/B/C PASS; live Groq Stop timing **not** proven (fake-provider Stop is the token-boundary proof).
-
-Phase 5 gates:
+Phase 6 gates:
 
 - `npm run typecheck` — pass
-- `npm test` — **116/116** pass (adds `pdf-citation.test.mts`)
-- `npm run build` — pass
-- Fixture PDF locate (sample + 150-page addressability) — pass in unit/integration tests
-- Browser: uploaded `phase5-sample.pdf`, verified quote `AED 100,000` → status “Highlighted on page 1.”; overlay rect matched Range geometry for offsets 21–32 (not first-word false highlight)
+- `npm test` — **136/136** pass (adds `docx-citation.test.mts`)
+- `npm run build` — pass (includes `GET …/docx-preview`)
+- Preview flatten matches stored `extractRawText` for `phase1-sample.docx`
+- Browser (local): DOCX `AED 100,000` table-cell highlight geometry match; resize recalculates overlays; long DOCX (~517 leaves) preview load ~308ms / nav ~1.6s; PDF regression highlight on `phase5-sample.pdf` still works
 
 | ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -35,14 +33,14 @@ Phase 5 gates:
 | A13 | Abstain when not in document | VERIFIED | prompts + coverage + pipeline | chat tests | — | 2–3 |
 | A14 | Large documents (~150 pages) strategy | VERIFIED | chunks + retrieval + chat budget | retrieval + chat | Lexical only | 2–3 |
 | A15 | Partial read ≠ full coverage / no false absence | VERIFIED | retrieval + chat abstention | retrieval + chat | — | 2–3 |
-| B1 | PDF citation navigation / highlight | VERIFIED | PdfCitationViewer, src/lib/pdf/* | pdf-citation.test.mts + browser AED highlight on sample PDF | Pathological PDF text order may fail align (honest fallback); DOCX layout is Phase 6; Playwright not installed | 5 |
+| B1 | PDF citation navigation / highlight | VERIFIED | PdfCitationViewer, src/lib/pdf/* | pdf-citation.test.mts + browser | Pathological PDF text order may fail align | 5 |
+| B1b | DOCX citation navigation / highlight | VERIFIED | DocxCitationViewer, src/lib/docx/* | docx-citation.test.mts + browser | Not Word page-fidelity; headers/footers limited; pathological Mammoth vs extractRawText mismatch → extracted-text fallback | 6 |
 | B2–B3 / C2 | Multi-doc / compare / agent | NOT_STARTED | — | — | Later phases | 7–10 |
 | SUB* | Submission deliverables | PARTIAL / NOT_STARTED | README | — | Screenshots/video/deploy pending | 12–13 |
 
-## Phase 4 notes
+## Phase 6 notes
 
-- Message statuses: `pending` → `streaming` → `complete` | `stopped` | `failed` | `interrupted`.
-- Stop sets `cancel_requested`; generation polls DB and aborts provider.
-- UI shows “Stopped · Partial answer saved” only when `persistenceOk` and `persistedStatus=stopped`.
-- Migration `db/migrations/20261008_phase4_chat_persistence.sql` applied on live Supabase.
-- Fake-provider Stop + reopen (A) VERIFIED; Supabase persist/Stop (B) VERIFIED; Groq durable complete (C) VERIFIED.
+- Semantic preview only — no fabricated Word page numbers.
+- Canonical offsets remain from Mammoth `extractRawText` (unchanged).
+- Visual map failure ≠ verification failure; extracted-text fallback available.
+- Browser-proven: table-cell `AED 100,000` (offsets 69–80), paragraph quotes, resize overlay update, long FloNeo DOCX, PDF regression.

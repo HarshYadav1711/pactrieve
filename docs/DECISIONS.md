@@ -1,5 +1,15 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 6 DOCX semantic preview and citation highlighting
+
+- **Decision:** Do **not** claim Word page-fidelity. Navigate by verified UTF-16 canonical offsets into a semantic HTML/React preview (headings, paragraphs, lists, tables, emphasis).
+- **Decision:** Preview pipeline: Mammoth `convertToHtml` → allowlisted AST (no `dangerouslySetInnerHTML`) → flatten with `\n\n` block separators to match stored `extractRawText` canonical text → DOM Range overlays.
+- **Decision:** No new sanitizer package; hand-rolled allowlist strips scripts, event handlers, `javascript:`/`data:` URLs, and embedded active content.
+- **Decision:** On visual align failure, keep verified-source status and fall back to the extracted-text highlighter (same offsets).
+- **Decision:** Phase 6 left **uncommitted** for manual user review.
+- **Observation:** Local browser acceptance PASS for table-cell `AED 100,000` (exact DOM Range geometry), paragraph citations, viewport resize overlay update, long FloNeo DOCX (~517 leaves), and PDF regression highlight on `phase5-sample.pdf`. Full chat-stream + historical citation reload not re-proven in this browser pass (covered by automated persist/chat tests).
+- **Limitation:** Headers/footers and some Word-only constructs may not appear in Mammoth HTML; pathological whitespace differences can fail visual map while verification still succeeds.
+
 ## 2026-10-09 — Phase 5 PDF citation navigation and highlighting
 
 - **Decision:** Use installed `pdfjs-dist` (client `getDocument` + canvas + `TextLayer`) against the **original uploaded PDF**, loaded same-origin via `GET /api/documents/:id/file?raw=1` (service-role download; bucket stays private). No new viewer package; no CDN worker (`postinstall` copies worker to `public/`).

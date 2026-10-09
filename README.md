@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 5 PDF citation navigation implemented (uncommitted — review/commit manually).** Phases 0–4 remain in place (`eb0c3f8` + Phase 4 migration applied). Phase 5 adds an in-app PDF.js viewer with canonical-offset → text-layer highlighting (multiline / cross-page / repeated occurrences). DOCX original-layout highlighting, multi-document Q&A, comparison, and agentic tools are **not implemented**.
+> **Status: Phase 6 DOCX citation navigation implemented (uncommitted — review/commit manually).** Phases 0–5 remain in place (`51fce30` PDF highlighting). Phase 6 adds a semantic DOCX preview with verified-offset highlighting (not pixel-perfect Word layout). Multi-document Q&A, comparison, and agentic tools are **not implemented**.
 
 ## Technology
 
@@ -126,7 +126,8 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | `POST` | `/api/documents/:id/conversations` | Create a new conversation |
 | `GET` | `/api/documents/:id/conversations/:cid` | Load messages + citations |
 | `POST` | `/api/documents/:id/messages/:mid/stop` | Request Stop (`cancel_requested`) |
-| `GET` | `/api/documents/:id/file` | Signed URL (`?redirect=1`) or same-origin PDF bytes (`?raw=1`) |
+| `GET` | `/api/documents/:id/file` | Signed URL (`?redirect=1`) or same-origin file bytes (`?raw=1`) |
+| `GET` | `/api/documents/:id/docx-preview` | Safe semantic DOCX preview AST (DOCX only) |
 | `DELETE` | `/api/documents/:id` | Removes file and DB record (child rows cascade) |
 
 ## Finished vs not finished
@@ -138,8 +139,8 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | Structure-aware retrieval + coverage statuses | Phase 2 verified (unit + live retrieval smoke) |
 | Grounded single-document chat + real SSE streaming | Phase 3 verified (unit + live Groq) |
 | Stop generation / durable chat history | Phase 4 verified (live A/B/C; Groq Stop timing not proven) |
-| PDF citation navigation / highlight | Phase 5 implemented (unit + fixture PDF locate; browser verify locally) |
-| DOCX original-layout highlighting | Phase 6 — not started (extracted text still works) |
+| PDF citation navigation / highlight | Phase 5 verified (`51fce30`) |
+| DOCX semantic preview / citation highlight | Phase 6 VERIFIED (136 tests + browser: table-cell highlight, resize, long DOCX; PDF regression OK) |
 | Multi-doc Q&A / comparison / Part C | Not started |
 | Deployed demo / video / written note | Not started |
 
@@ -166,9 +167,9 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 5 (`feat: implement verified PDF citation navigation`).
-2. Phase 6 — DOCX evidence highlighting.
-3. Multi-doc QA; comparison; Part C Option 2.
+1. Review/commit Phase 6 (`feat: add DOCX evidence highlighting and occurrence resolution`).
+2. Phase 7 — cross-document evidence-based analysis.
+3. Comparison; Part C Option 2 agent tools.
 4. Deployment, screenshots, demo video, technical note.
 
 `postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).

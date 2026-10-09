@@ -10,9 +10,10 @@
 
 - **Phase 0–2:** Complete (committed).
 - **Phase 3:** Complete (committed `1579537` + citation fix `f1c7e85`).
-- **Phase 4:** Complete (committed `eb0c3f8`). Migration applied; live A/B/C verified. Persistent conversations, Stop cancellation, partial-answer recovery. Live Groq Stop timing not proven.
-- **Phase 5:** Implementation complete in working tree (**uncommitted — user commits manually**). PDF.js viewer + canonical-offset highlighting.
-- **Phase 6+:** Not started. Do not auto-start.
+- **Phase 4:** Complete (committed `eb0c3f8`). Migration applied; live A/B/C verified. Live Groq Stop timing not proven.
+- **Phase 5:** Complete (committed `51fce30`). PDF.js viewer + canonical-offset highlighting.
+- **Phase 6:** Implementation complete in working tree (**uncommitted — user commits manually**). Semantic DOCX preview + verified citation highlighting. Gates: typecheck / **136** tests / build pass; browser acceptance on sample + long DOCX; PDF regression OK.
+- **Phase 7+:** Not started. Do not auto-start.
 
 ## Current implementation
 
@@ -20,31 +21,26 @@
 - Structure-aware retrieval (Phase 2).
 - Grounded streaming chat with verified citations (Phase 3).
 - Persistent chat lifecycle (Phase 4).
-- **PDF citation navigation (Phase 5):**
-  - In-app PDF viewer (page nav, zoom, text layer).
-  - Citation click → locate verified offsets → highlight text-layer spans.
-  - Multiline / multi-span / cross-page ranges; repeated occurrences via offsets.
-  - Alignment failure: keep verified status, page navigate, no fake highlight.
-  - Historical citations: derive `pageIndices` from stored page boundaries.
-  - DOCX: extracted-text path only (Phase 6 for layout highlight).
+- PDF citation navigation (Phase 5).
+- **DOCX citation navigation (Phase 6):**
+  - Mammoth HTML → allowlisted semantic AST (React-only; no raw HTML).
+  - Flatten with `\n\n` block separators to match `extractRawText` canonical text.
+  - Citation offsets → leaf text nodes → DOM Range overlays.
+  - Align failure keeps verified status and falls back to extracted-text highlight.
+  - Not pixel-perfect Word layout; no fabricated page numbers.
+  - Browser: `AED 100,000` table-cell highlight (geometry match); resize recalculates; FloNeo DOCX ~517 leaves load ~308ms / cite ~1.6s.
 
-## Phase 5 code map
+## Phase 6 code map
 
-- `src/lib/pdf/*` — page ranges, reconstruct-with-map, align, locate, DOM measure.
-- `src/components/PdfCitationViewer.tsx` — viewer + highlight overlays.
-- `src/app/api/documents/[id]/file/route.ts` — `?raw=1` same-origin stream.
-- `tests/pdf-citation.test.mts` — mapping + fixture PDF locate.
-- `scripts/copy-pdf-worker.mjs` — postinstall worker copy.
-
-## Durability / highlight honesty
-
-- Phase 4 checkpoint durability unchanged.
-- Visual highlight claims precision only when `locateCitationOnPdf` succeeds; otherwise status explains alignment failure.
+- `src/lib/docx/*` — safe HTML AST, flatten, align, locate, preview builder.
+- `src/components/DocxCitationViewer.tsx` — semantic preview + highlights.
+- `src/app/api/documents/[id]/docx-preview` — server-side preview JSON.
+- `tests/docx-citation.test.mts` + `tests/helpers/docx-fixture.mts`.
 
 ## Next immediate steps
 
-1. User reviews/commits Phase 5.
-2. Phase 6 — DOCX evidence highlighting.
+1. User reviews/commits Phase 6.
+2. Phase 7 — cross-document evidence-based analysis (only after explicit approval).
 
 ## Ground rules
 
