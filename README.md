@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 9 substantive significance implemented (uncommitted — review/commit manually).** Phases 0–8 remain committed through `f559ae7` (clause-level compare). Compare Versions now explains material differences with severity filter/sort. Agentic research tools (Phase 10) are **not** implemented.
+> **Status: Phase 10 Agent Research implemented (uncommitted — review/commit manually).** Phases 0–9 remain committed through `025fd88`. Use **Ask Documents** for direct Q&A, **Agent Research** for multi-step tool investigation, and **Compare Versions** for revision analysis.
 
 ## Technology
 
@@ -22,7 +22,7 @@ Requirements come from **SDE Assignment.pdf**. Traceability and governance live 
 - `docs/DECISIONS.md` — engineering decisions
 - `docs/starter-import/` — original starter README / context preserved at import time
 
-**Part C choice:** Option 2 — agentic document research (not started).
+**Part C choice:** Option 2 — agentic document research (Phase 10 implemented; review/commit manually).
 
 > Governance documents are specifications and process controls. They do **not** prove features are implemented. See the requirements matrix for evidence-backed status.
 
@@ -133,8 +133,11 @@ The script loads `.env.local` from the repo root via Node's built-in `process.lo
 | `GET`/`POST` | `/api/research/conversations` | List/create multi-document conversations (`?docs=` / body `documentIds`) |
 | `GET` | `/api/research/conversations/:cid` | Load multi-doc history + citations |
 | `POST` | `/api/compare` | Clause/paragraph version comparison (`originalDocumentId`, `revisedDocumentId`) |
+| `POST` | `/api/agent/research` | Bounded agentic multi-step research SSE (`documentIds`, `question`) |
+| `GET`/`POST` | `/api/agent/conversations` | Agent conversation list/create (`?docs=`) |
+| `GET` | `/api/agent/conversations/:cid` | Load agent conversation + citations |
 
-UI routes: `/` library · `/documents/:id` · `/research` · `/compare`
+UI routes: `/` library · `/documents/:id` · `/research` · `/compare` · `/agent`
 
 ## Finished vs not finished
 
@@ -149,8 +152,8 @@ UI routes: `/` library · `/documents/:id` · `/research` · `/compare`
 | DOCX semantic preview / citation highlight | Phase 6 VERIFIED (`0253b74`) |
 | Multi-document comparative Q&A | Phase 7 VERIFIED (`cfa8140`) |
 | Clause-level version comparison (structural) | Phase 8 VERIFIED (`f559ae7`) |
-| Substantive change explanations / severity filters | Phase 9 implemented (201 tests; live/browser in phase report) |
-| Part C agent tools | Not started (Phase 10) |
+| Substantive change explanations / severity filters | Phase 9 VERIFIED (`025fd88`) |
+| Part C agentic document research | Phase 10 implemented (213 tests; live Groq multi-round + browser in phase report) |
 | Deployed demo / video / written note | Not started |
 
 ## Checks
@@ -173,6 +176,8 @@ node --experimental-strip-types scripts/phase7-live-multidoc.mjs
 node scripts/phase8-live-compare.mjs
 # Phase 9 live significance (+ optional Groq enrich):
 node scripts/phase9-live-significance.mjs
+# Phase 10 live agent research (app running + Groq tool calling + ≥2 ready docs):
+node scripts/phase10-live-agent.mjs
 ```
 
 Optional SQL helpers in Supabase:
@@ -182,8 +187,8 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 9 (`feat: classify and explain material contract changes` or similar).
-2. Phase 10 — Part C Option 2 agent tools.
+1. Review/commit Phase 10 (`feat: implement bounded agentic contract research` or similar).
+2. Phase 11 — adversarial / accessibility review.
 3. Deployment, screenshots, demo video, technical note.
 
 `postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).

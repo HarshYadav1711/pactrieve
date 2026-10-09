@@ -87,7 +87,7 @@ export async function runGroundedChat(deps: ChatPipelineDeps): Promise<ChatPipel
     coverage: retrieval.coverage,
     truncated: prepared.truncated
   });
-  const promptChars = messages.reduce((sum, m) => sum + m.content.length, 0);
+  const promptChars = messages.reduce((sum, m) => sum + (m.content?.length ?? 0), 0);
 
   emit({
     type: "evidence_prepared",

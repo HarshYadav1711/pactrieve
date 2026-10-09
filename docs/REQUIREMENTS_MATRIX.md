@@ -4,17 +4,17 @@ Source: SDE Assignment.pdf (see `ASSIGNMENT_SOURCE.md`). Behavioural detail: `do
 
 Status legend: `NOT_STARTED` | `PARTIAL` | `IMPLEMENTED_UNVERIFIED` | `VERIFIED` | `BLOCKED`
 
-Evidence gates for this update (2026-10-09 — Phase 9 working tree, **not yet user-committed**):
+Evidence gates for this update (2026-10-09 — Phase 10 working tree, **not yet user-committed**):
 
-Phase 4–8 remain VERIFIED (committed through `f559ae7`). Live Groq Stop timing **not** proven.
+Phase 4–9 remain VERIFIED (committed through `025fd88`). Live Groq Stop timing **not** proven.
 
-Phase 9 gates:
+Phase 10 gates:
 
 - `npm run typecheck` — pass
-- `npm test` — **201/201** pass (adds `significance.test.mts`)
-- `npm run build` — pass
-- Live Supabase + Groq enrich: alpha/beta liability high + notice medium; amounts/direction preserved; enrichment 2 applied
-- Browser: High/Medium filters, All restore, document-order sort, original/revised SourceFocus
+- `npm test` — **213/213** pass (adds `agent.test.mts`)
+- `npm run build` — pass (`/agent`, `/api/agent/research`, `/api/agent/conversations`)
+- Live Groq: multi-round tool loop (search → inspect_passage on issued ref → further search); verified citations; amounts/notice preserved
+- Browser: Agent Research desk; reopen saved conversation; Alpha + Beta citation highlights
 
 | ID | Feature | Status | Relevant files | Tests | Known limitations | Phase |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -37,12 +37,12 @@ Phase 9 gates:
 | B1b | DOCX citation navigation / highlight | VERIFIED | DocxCitationViewer, src/lib/docx/* | docx-citation.test.mts + browser | Not Word page-fidelity; headers/footers limited | 6 |
 | B2 | Multi-document questions / comparative synthesis | VERIFIED | multi-pipeline, research APIs, MultiDocumentChat, /research | multi-doc.test.mts + live Groq + browser | Selection 2–5; lexical miss ≠ absence | 7 |
 | B3 | Document version comparison | VERIFIED | compare/*, significance/*, /api/compare, /compare, VersionCompareLedger | compare + significance + live + browser | Heuristic significance ≠ legal certainty; enrichment optional | 8–9 |
-| C2 | Agentic research tools | NOT_STARTED | — | — | Phase 10 | 10 |
+| C2 | Agentic document research | VERIFIED | agent/*, /api/agent/*, /agent, AgentResearchChat | agent.test.mts + live Groq + browser | Activity timeline not durable; live Stop timing vs Groq tool rounds unproven; incomplete research disclosed via limitReason | 10 |
 | SUB* | Submission deliverables | PARTIAL / NOT_STARTED | README | — | Screenshots/video/deploy pending | 12–13 |
 
-## Phase 9 notes
+## Phase 10 notes
 
-- Structural pairing remains Phase 8; significance annotates pairs only.
-- Filters/sorts are real client operations on analysis output.
-- Model enrichment is optional and grounded; deterministic path always usable.
+- Genuine multi-round tool selection observed live (inspect followed search-issued `p1`).
+- Fake-provider tests prove orchestration consumes model tool calls; live Groq proves provider compatibility separately.
+- Ask Documents (`/research`) remains non-agentic RAG; Agent Research (`/agent`) is the Part C path.
 - Fixtures: `fixtures/phase7-alpha.docx`, `fixtures/phase7-beta.docx`.

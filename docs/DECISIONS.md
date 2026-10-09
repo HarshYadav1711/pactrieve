@@ -1,5 +1,16 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 10 bounded agentic document research
+
+- **Decision:** Extend existing OpenAI-compatible provider with non-streaming `chatWithTools`; keep final answer on `streamChat`. No second networking stack / SDK.
+- **Decision:** Three tools only — `search_documents` (reuse `retrieveDocument`), `inspect_passage` (session-issued refs only), `list_document_sections` (`detectSections`). Read-only and selection-scoped.
+- **Decision:** Server-enforced budgets: max 5 rounds, 10 tool calls, 2 identical fingerprints, ~55s wall, 8 model requests, bounded result JSON.
+- **Decision:** Evidence registry assigns stable `eN` / `pN` ids; final citations via `resolveCitationsMulti`. Model cannot set offsets/verification.
+- **Decision:** Separate `/agent` workspace from Ask Documents (`/research`) and Compare Versions. Reuse conversation store + Stop poll; activity timeline is stream-ephemeral (final answer + citations durable).
+- **Decision:** Phase 10 left **uncommitted** for manual review. No Phase 11.
+- **Observation:** Live Groq multi-round PASS (~26s): search → inspect `p1` → further searches; citations on alpha/beta with AED 100,000 / 1,000,000 and 30/60-day notice. Browser PASS: reopen conversation; Alpha/Beta citation SourceFocus highlights. Suite **213/213**; typecheck + build pass (`/agent`, `/api/agent/*`).
+- **Limitation:** Activity history not persisted as structured events. Live Stop timing against Groq tool rounds not separately timed. Model may hit max_rounds before exhaustive coverage — disclosed via `limitReason`. Prompt-injection defenses are best-effort.
+
 ## 2026-10-09 — Phase 9 substantive significance and severity filtering
 
 - **Decision:** Keep Phase 8 structural alignment authoritative. Add a separate significance layer that never re-pairs clauses via LLM.
