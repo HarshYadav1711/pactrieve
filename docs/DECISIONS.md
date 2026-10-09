@@ -1,5 +1,15 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 5 PDF citation navigation and highlighting
+
+- **Decision:** Use installed `pdfjs-dist` (client `getDocument` + canvas + `TextLayer`) against the **original uploaded PDF**, loaded same-origin via `GET /api/documents/:id/file?raw=1` (service-role download; bucket stays private). No new viewer package; no CDN worker (`postinstall` copies worker to `public/`).
+- **Decision:** Mapping is two-stage: (1) verified canonical UTF-16 offsets from `verifyQuote` / persisted citations; (2) page-local align onto PDF.js text items using the same `reconstructPdfPage` geometry rules, with whitespace-tolerant fallback via `normalizeWithSourceMap`. Never invent highlight rectangles when alignment fails — navigate to the known page and report unavailable precise highlight.
+- **Decision:** Repeated occurrences resolve by stored `startOffset`/`endOffset` (and derived page indices from stored page boundaries). Empty `pageIndices` on historical citations are derived client-side from `source.pages`.
+- **Decision:** Viewport windowing renders only pages near the current page / citation pages so page ~150 is reachable without full-document rasterization.
+- **Decision:** DOCX original-layout highlighting remains Phase 6; extracted-text inspector stays available.
+- **Decision:** Phase 5 left **uncommitted** for manual user review.
+- **Limitation:** Some PDFs with pathological text item order / custom encodings may fail visual alignment while remaining verified in canonical text.
+
 ## 2026-10-08 — Phase 4 persistent chat and cancellation
 
 - **Decision:** Reuse existing `conversations` / `conversation_documents` / `messages` / `citations` tables with an **additive** migration (`pending`/`interrupted` statuses, `cancel_requested`, `updated_at`, optional `citations.section_label`).
@@ -8,8 +18,9 @@
 - **Decision:** Checkpoint assistant content ~every 400 characters or 800 ms while `streaming`. Flush before Stop/failure finalization.
 - **Decision:** Terminal transitions are idempotent; a late `complete` cannot overwrite `stopped`.
 - **Decision:** On Stop, resolve citations only against accepted partial text; incomplete markers are not verified.
-- **Decision:** Phase 4 left **uncommitted** for manual user review.
+- **Decision:** Phase 4 committed as `eb0c3f8` after manual review; migration applied on live Supabase.
 - **Limitation:** Tokens after the last checkpoint may be lost on hard process death before finalization.
+- **Limitation:** Live Groq Stop timing was not reproducibly demonstrated; fake-provider Stop remains the token-boundary proof.
 
 ## 2026-10-08 — Phase 3 grounded streaming chat
 

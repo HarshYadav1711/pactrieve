@@ -3,12 +3,17 @@ import Link from "next/link";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {useParams} from "next/navigation";
 import DocumentChat from "@/components/DocumentChat";
+import PdfCitationViewer, {type ViewerNavStatus} from "@/components/PdfCitationViewer";
 import type {VerifiedCitation} from "@/lib/chat/types";
+import {pageIndicesForRange} from "@/lib/pdf";
 
 type Source = {text: string; pages: {pageIndex:number;start:number;end:number}[]};
 type Occurrence = {start:number;end:number;pageIndices:number[];exactSourceText:string;occurrenceIndex:number};
 type VerifyResponse = {verified:boolean;occurrences:Occurrence[];reason?:string};
-type DocumentData = {document:{name:string;mime_type:string;page_count:number|null;unreadable_page_count:number;status?:string};source:Source};
+type DocumentData = {
+  document:{name:string;mime_type:string;page_count:number|null;unreadable_page_count:number;status?:string};
+  source:Source
+};
 
 export default function DocumentInspector() {
   const {id} = useParams<{id:string}>();
@@ -19,8 +24,13 @@ export default function DocumentInspector() {
   const [verification,setVerification] = useState<VerifyResponse|null>(null);
   const [selected,setSelected] = useState(0);
   const [inspectRange,setInspectRange] = useState<{start:number;end:number}|null>(null);
+  const [activeCitation,setActiveCitation] = useState<VerifiedCitation|null>(null);
+  const [viewerStatus,setViewerStatus] = useState<ViewerNavStatus>({kind:"idle"});
+  const [sourceMode,setSourceMode] = useState<"pdf"|"extracted">("pdf");
   const [mobileTab,setMobileTab] = useState<"source"|"chat">("chat");
   const highlight = useRef<HTMLElement|null>(null);
+
+  const isPdf = Boolean(data?.document.mime_type?.includes("pdf"));
 
   const load = useCallback(async() => {
     try {
@@ -28,13 +38,14 @@ export default function DocumentInspector() {
       const payload=await response.json();
       if(!response.ok) throw new Error(payload.error);
       setData(payload);
+      if (!payload.document.mime_type?.includes("pdf")) setSourceMode("extracted");
     } catch(e) {setError(e instanceof Error?e.message:"Could not load document");}
   },[id]);
   useEffect(()=>{void load();},[load]);
   useEffect(()=>{highlight.current?.scrollIntoView({behavior:"smooth",block:"center"});},[verification,selected,inspectRange]);
 
   async function verify(e:React.FormEvent) {
-    e.preventDefault();setChecking(true);setError(null);setVerification(null);setSelected(0);setInspectRange(null);
+    e.preventDefault();setChecking(true);setError(null);setVerification(null);setSelected(0);setInspectRange(null);setActiveCitation(null);
     try {
       const response=await fetch(`/api/documents/${id}/verify`,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({quote})});
       const payload=await response.json();
@@ -48,16 +59,56 @@ export default function DocumentInspector() {
     window.open(`/api/documents/${id}/file?redirect=1`,"_blank","noopener,noreferrer");
   }
 
+  function enrichCitation(citation: VerifiedCitation): VerifiedCitation {
+    if (!data) return citation;
+    if (citation.documentId !== id) return citation;
+    const pageIndices =
+      citation.pageIndices.length > 0
+        ? citation.pageIndices
+        : pageIndicesForRange(data.source.pages, citation.startOffset, citation.endOffset);
+    return {...citation, pageIndices};
+  }
+
   function inspectCitation(citation: VerifiedCitation) {
+    const enriched = enrichCitation(citation);
+    if (enriched.documentId !== id) {
+      setError("That citation belongs to a different document.");
+      return;
+    }
     setVerification(null);
-    setInspectRange({start: citation.startOffset, end: citation.endOffset});
+    setInspectRange({start: enriched.startOffset, end: enriched.endOffset});
+    setActiveCitation(enriched);
+    if (isPdf) setSourceMode("pdf");
     setMobileTab("source");
+  }
+
+  function inspectOccurrence(occurrence: Occurrence) {
+    setInspectRange({start: occurrence.start, end: occurrence.end});
+    if (data && isPdf) {
+      setActiveCitation({
+        evidenceId: `manual-${occurrence.occurrenceIndex}`,
+        documentId: id,
+        quote: occurrence.exactSourceText,
+        startOffset: occurrence.start,
+        endOffset: occurrence.end,
+        pageIndices: occurrence.pageIndices,
+        sectionLabel: null,
+        occurrenceIndex: occurrence.occurrenceIndex,
+        verified: true
+      });
+      setSourceMode("pdf");
+    }
   }
 
   const occurrence=verification?.verified ? verification.occurrences[selected] : undefined;
   const highlightStart = occurrence?.start ?? inspectRange?.start;
   const highlightEnd = occurrence?.end ?? inspectRange?.end;
   const hasHighlight = highlightStart !== undefined && highlightEnd !== undefined && data;
+
+  useEffect(() => {
+    if (occurrence && isPdf) inspectOccurrence(occurrence);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [occurrence?.occurrenceIndex, occurrence?.start, occurrence?.end, isPdf]);
 
   return <div className="app-shell inspector-shell">
     <header className="topbar"><Link className="brand" href="/"><div className="brand-glyph">P</div><div><strong>Pactrieve</strong><span>Evidence workspace</span></div></Link>
@@ -77,9 +128,46 @@ export default function DocumentInspector() {
 
       <div className="inspector-grid desk-grid">
         <section className={`reader-card ${mobileTab==="source"?"":"mobile-hidden"}`}>
-          <div className="reader-heading"><b>Extracted source</b><span>{data?.document.page_count ? `${data.document.page_count} PDF pages` : "Semantic DOCX text"}</span></div>
+          <div className="reader-heading">
+            <b>{isPdf ? "Original PDF" : "Extracted source"}</b>
+            <span>{data?.document.page_count ? `${data.document.page_count} PDF pages` : "Semantic DOCX text"}</span>
+          </div>
+
+          {isPdf && (
+            <div className="source-mode-tabs" role="tablist" aria-label="Source view">
+              <button type="button" role="tab" aria-selected={sourceMode==="pdf"} className={sourceMode==="pdf"?"active":""} onClick={()=>setSourceMode("pdf")}>PDF viewer</button>
+              <button type="button" role="tab" aria-selected={sourceMode==="extracted"} className={sourceMode==="extracted"?"active":""} onClick={()=>setSourceMode("extracted")}>Extracted text</button>
+            </div>
+          )}
+
+          {viewerStatus.kind === "align_failed" && sourceMode === "pdf" && (
+            <div className="warning-banner" role="status">
+              {viewerStatus.message}
+              {viewerStatus.fallbackPage != null ? ` Showing page ${viewerStatus.fallbackPage}.` : ""}
+            </div>
+          )}
+          {viewerStatus.kind === "highlighted" && sourceMode === "pdf" && (
+            <div className="status-banner" role="status">
+              Highlighted on page{viewerStatus.pages.length > 1 ? "s" : ""} {viewerStatus.pages.join(", ")}.
+            </div>
+          )}
+
           {!data ? <div className="empty">Loading extracted source…</div> :
-            <pre className="source-preview">{hasHighlight ? <>{data.source.text.slice(0,highlightStart)}<mark ref={highlight}>{data.source.text.slice(highlightStart,highlightEnd)}</mark>{data.source.text.slice(highlightEnd)}</> : data.source.text}</pre>}
+            isPdf && sourceMode === "pdf" ? (
+              <PdfCitationViewer
+                documentId={id}
+                pages={data.source.pages}
+                sourceText={data.source.text}
+                citation={activeCitation}
+                onStatus={setViewerStatus}
+              />
+            ) : (
+              <pre className="source-preview">{hasHighlight ? <>{data.source.text.slice(0,highlightStart)}<mark ref={highlight}>{data.source.text.slice(highlightStart,highlightEnd)}</mark>{data.source.text.slice(highlightEnd)}</> : data.source.text}</pre>
+            )}
+
+          {!isPdf && data && (
+            <p className="muted-note">DOCX original-layout highlighting is Phase 6. Extracted text navigation remains available.</p>
+          )}
         </section>
 
         <aside className={`analysis-column ${mobileTab==="chat"?"":"mobile-hidden"}`}>
@@ -109,6 +197,11 @@ export default function DocumentInspector() {
                 {verification.verified && verification.occurrences.length>1 && <label>Occurrences <select value={selected} onChange={e=>setSelected(Number(e.target.value))}>
                   {verification.occurrences.map(item=><option key={item.occurrenceIndex} value={item.occurrenceIndex}>Occurrence {item.occurrenceIndex+1}</option>)}</select></label>}
                 {occurrence && <small>Source offsets {occurrence.start}–{occurrence.end} · Text page(s): {occurrence.pageIndices.map(i=>i+1).join(", ")}</small>}
+                {occurrence && isPdf && (
+                  <button type="button" className="button subtle" style={{marginTop:8}} onClick={()=>inspectOccurrence(occurrence)}>
+                    Show in PDF viewer
+                  </button>
+                )}
               </div>}
             </div>
           </details>

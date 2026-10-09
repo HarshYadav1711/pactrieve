@@ -25,3 +25,6 @@ coverage/
 # IDE
 .idea/
 .vscode/
+
+# PDF.js worker copied by postinstall (same-origin; no CDN)
+public/pdf.worker.min.mjs

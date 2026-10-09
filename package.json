@@ -4,6 +4,7 @@
   "version": "0.1.0",
   "description": "Evidence-first legal contract analysis workspace",
   "scripts": {
+    "postinstall": "node scripts/copy-pdf-worker.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
