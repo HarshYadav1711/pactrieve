@@ -189,8 +189,9 @@ function CompareVersionsInner() {
           <div>
             <h1>Compare Versions</h1>
             <p>
-              Align clauses and paragraphs between an earlier and later contract. This is structural
-              textual comparison — not multi-document Q&amp;A and not legal-risk scoring.
+              Align clauses between an earlier and later contract, then review substantive
+              differences with significance filters. Not multi-document Q&amp;A and not a substitute
+              for legal advice.
             </p>
           </div>
         </div>

@@ -1,5 +1,16 @@
 # Engineering decisions
 
+## 2026-10-09 — Phase 9 substantive significance and severity filtering
+
+- **Decision:** Keep Phase 8 structural alignment authoritative. Add a separate significance layer that never re-pairs clauses via LLM.
+- **Decision:** Deterministic baseline always runs (works without `LLM_*`). Optional enrichment uses existing OpenAI-compatible provider in small batches (≤8 changes, ≤2 batches), Zod-validated JSON, amount/direction grounding checks; reject or keep deterministic text on failure.
+- **Decision:** Severity scale `high` | `medium` | `low` | `review_needed`. `review_needed` is distinct from low (uncertain alignment, currency mismatch, partial unreadable add/remove).
+- **Decision:** Rubric ties to observable signals (monetary caps, negation/modal, indemnity/termination topics, notice periods, jurisdiction, party roles). Moved near-identical text stays low.
+- **Decision:** UI filter/sort operate client-side on the returned result (no re-compare). SourceFocus IDs/offsets unchanged after filter/sort.
+- **Decision:** Phase 9 left **uncommitted** for manual review. No Phase 10 agent loop.
+- **Observation:** Live alpha→beta: liability **high** (AED 100,000→1,000,000, direction correct); notice **medium** (30→60 days). Groq enrichment succeeded after JSON coerce (2 applied). Browser PASS: High/Medium filters, restore All, document-order sort, original/revised DOCX SourceFocus. Suite **201/201**; typecheck + build pass.
+- **Limitation:** Model `practicalEffect` is interpretive and may over-generalize party impact; deterministic summary remains the factual baseline. Not legal advice. Full 150-page live pair not re-uploaded this phase (80-clause unit bound held).
+
 ## 2026-10-09 — Phase 8 clause-level version comparison
 
 - **Decision:** Compute comparison **on the fly** from canonical text (`getDocumentSource`). No new comparison tables or migrations.

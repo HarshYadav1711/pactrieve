@@ -50,7 +50,8 @@ export function alignBlocks(
       confidence,
       original: o,
       revised: r,
-      rationale
+      rationale,
+      significance: null
     });
   };
 

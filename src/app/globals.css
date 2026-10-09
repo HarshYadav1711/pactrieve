@@ -157,10 +157,39 @@
 .clause-text{white-space:pre-wrap;font-family:Georgia,"Times New Roman",serif;font-size:13.5px;line-height:1.55;margin:0 0 10px;max-height:280px;overflow:auto}
 .compare-side .absent{color:var(--muted);font-size:13px;font-style:italic}
 .compare-source-panel{border:1px solid var(--line);background:#fff;padding:14px;position:sticky;top:12px;max-height:calc(100vh - 40px);overflow:auto}
+
+/* Phase 9 - substantive significance */
+.compare-overview{border:1px solid #d8dedd;background:#fff;padding:14px 16px;margin:0 0 12px}
+.compare-overview-lead{margin:0 0 8px;font-size:14px}
+.compare-severity-counts{display:flex;flex-wrap:wrap;gap:10px 16px;font-size:13px;margin:0 0 8px}
+.compare-themes{margin:0 0 6px;font-size:12px;color:#445}
+.compare-highlights{margin:0 0 6px;font-size:12px}
+.compare-controls{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin:0 0 10px}
+.compare-filter-group{display:flex;flex-wrap:wrap;gap:6px}
+.filter-chip{border:1px solid #c6d7d2;background:#f5f8f7;color:#235b52;padding:6px 10px;font-size:12px;font-weight:600}
+.filter-chip.active{background:#205c55;border-color:#205c55;color:#fff}
+.filter-chip .filter-count{margin-left:6px;opacity:.85;font-weight:500}
+.compare-sort{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--muted)}
+.compare-sort select{padding:6px 8px;border:1px solid #d8dedd;background:#fbfaf7;color:var(--ink)}
+.compare-visible-count{margin:0 0 10px;font-size:12px}
+.severity-badge{font-size:11px;letter-spacing:.03em;padding:2px 8px;border:1px solid #d8dedd}
+.severity-badge.high{border-color:#8a4b4b;color:#6e3030;background:#f8ecec}
+.severity-badge.medium{border-color:#b9892d;color:#8a6410;background:#fff6e0}
+.severity-badge.low{border-color:#7a8a86;color:#4a5854;background:#eef1f0}
+.severity-badge.review_needed{border-color:#516a9b;color:#3d5278;background:#e8edf8}
+.change-analysis{padding:10px 12px;border-bottom:1px solid #e7eceb;background:#f7faf8}
+.change-summary,.change-effect{margin:0 0 6px;font-size:13px;line-height:1.5}
+.change-reasons{margin:6px 0;padding-left:18px;font-size:12px;color:#445}
+.change-signals{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.signal-chip{font-size:10px;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border:1px solid #d0ddd8;color:#3d5c55;background:#eef5f2}
+.analysis-method{font-size:11px}
+.compare-change> .change-rationale{padding:6px 12px;margin:0;border-bottom:1px solid #eef1f0}
 @media(max-width:960px){
   .compare-setup{grid-template-columns:1fr}
   .compare-workspace{grid-template-columns:1fr}
   .compare-pair{grid-template-columns:1fr}
   .compare-side.original{border-right:0;border-bottom:1px solid #e7eceb}
   .compare-source-panel{position:static;max-height:none}
+  .compare-controls{flex-direction:column;align-items:stretch}
 }
+

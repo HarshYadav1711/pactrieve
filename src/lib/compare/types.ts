@@ -1,8 +1,11 @@
 import {z} from "zod";
+import type {ChangeSignificance, ComparisonOverview} from "./significance/types.ts";
 
 export const compareRequestSchema = z.object({
   originalDocumentId: z.string().uuid("Invalid original document ID."),
-  revisedDocumentId: z.string().uuid("Invalid revised document ID.")
+  revisedDocumentId: z.string().uuid("Invalid revised document ID."),
+  /** When true (default), attempt bounded LLM enrichment if configured. */
+  enrich: z.boolean().optional()
 });
 
 export type CompareRequest = z.infer<typeof compareRequestSchema>;
@@ -19,6 +22,8 @@ export interface SourceFocus {
   pageIndices?: number[];
   occurrenceIndex?: number;
 }
+
+export type {ChangeSignificance, ComparisonOverview};
 
 export interface ComparisonBlock {
   id: string;
@@ -44,6 +49,8 @@ export interface ComparisonChange {
   revised: ComparisonBlock | null;
   /** Short machine-readable rationale for the classification. */
   rationale: string;
+  /** Phase 9 substantive annotation; null only if analysis failed for this row. */
+  significance: ChangeSignificance | null;
 }
 
 export interface ComparisonCoverage {
@@ -82,10 +89,18 @@ export interface ComparisonResult {
   changes: ComparisonChange[];
   summary: ComparisonSummary;
   coverage: ComparisonCoverage;
+  overview: ComparisonOverview;
   metrics: {
     segmentMs: number;
     alignMs: number;
     totalMs: number;
     candidatePairs: number;
+  };
+  analysisMetrics: {
+    deterministicMs: number;
+    enrichMs: number;
+    enrichAttempted: boolean;
+    enrichSucceeded: number;
+    enrichFailed: number;
   };
 }

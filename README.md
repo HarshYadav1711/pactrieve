@@ -4,7 +4,7 @@
 
 Evidence-first contract analysis workspace for an SDE engineering assessment.
 
-> **Status: Phase 8 Compare Versions implemented (uncommitted — review/commit manually).** Phases 0–7 remain committed through `cfa8140` (multi-document research). Select exactly two ready contracts for clause/paragraph alignment, or 2–5 for research Q&A. Substantive significance/severity (Phase 9) and agentic tools are **not** implemented.
+> **Status: Phase 9 substantive significance implemented (uncommitted — review/commit manually).** Phases 0–8 remain committed through `f559ae7` (clause-level compare). Compare Versions now explains material differences with severity filter/sort. Agentic research tools (Phase 10) are **not** implemented.
 
 ## Technology
 
@@ -148,8 +148,8 @@ UI routes: `/` library · `/documents/:id` · `/research` · `/compare`
 | PDF citation navigation / highlight | Phase 5 verified (`51fce30`) |
 | DOCX semantic preview / citation highlight | Phase 6 VERIFIED (`0253b74`) |
 | Multi-document comparative Q&A | Phase 7 VERIFIED (`cfa8140`) |
-| Clause-level version comparison (structural) | Phase 8 implemented (174 tests; live/browser in phase report) — significance deferred to Phase 9 |
-| Substantive change explanations / severity | Not started (Phase 9) |
+| Clause-level version comparison (structural) | Phase 8 VERIFIED (`f559ae7`) |
+| Substantive change explanations / severity filters | Phase 9 implemented (201 tests; live/browser in phase report) |
 | Part C agent tools | Not started (Phase 10) |
 | Deployed demo / video / written note | Not started |
 
@@ -171,6 +171,8 @@ node --experimental-strip-types scripts/phase4-live-chat.mjs
 node --experimental-strip-types scripts/phase7-live-multidoc.mjs
 # Phase 8 live version compare (app running + phase7-alpha/beta ready):
 node scripts/phase8-live-compare.mjs
+# Phase 9 live significance (+ optional Groq enrich):
+node scripts/phase9-live-significance.mjs
 ```
 
 Optional SQL helpers in Supabase:
@@ -180,10 +182,9 @@ Optional SQL helpers in Supabase:
 
 ## Next milestones
 
-1. Review/commit Phase 8 (`feat: compare contract versions at clause level` or similar).
-2. Phase 9 — substantive change explanations and severity.
-3. Part C Option 2 agent tools.
-4. Deployment, screenshots, demo video, technical note.
+1. Review/commit Phase 9 (`feat: classify and explain material contract changes` or similar).
+2. Phase 10 — Part C Option 2 agent tools.
+3. Deployment, screenshots, demo video, technical note.
 
 `postinstall` copies `pdfjs-dist` worker → `public/pdf.worker.min.mjs` (gitignored; no CDN).
 

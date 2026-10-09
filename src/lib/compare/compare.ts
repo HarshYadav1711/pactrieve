@@ -1,6 +1,7 @@
 import type {CanonicalSource} from "../evidence/verify.ts";
 import {alignBlocks} from "./align.ts";
 import {assertBlockSlice, segmentDocument} from "./segment.ts";
+import {analyzeComparison, mergeSignificances} from "./significance/analyze.ts";
 import type {
   ComparisonCoverage,
   ComparisonDocumentMeta,
@@ -92,17 +93,47 @@ export function compareDocumentSources(input: CompareDocumentsInput): Comparison
     notes
   };
 
-  return {
+  const structural: ComparisonResult = {
     original: input.original.meta,
     revised: input.revised.meta,
     changes,
     summary,
     coverage,
+    overview: {
+      totalChanged: 0,
+      severityCounts: {high: 0, medium: 0, low: 0, review_needed: 0},
+      highlightChangeIds: [],
+      broadThemes: [],
+      notes: []
+    },
     metrics: {
       segmentMs,
       alignMs,
       totalMs: Date.now() - t0,
       candidatePairs: aligned.candidatePairs
+    },
+    analysisMetrics: {
+      deterministicMs: 0,
+      enrichMs: 0,
+      enrichAttempted: false,
+      enrichSucceeded: 0,
+      enrichFailed: 0
+    }
+  };
+
+  const analyzed = analyzeComparison(structural);
+  const withSignificance = mergeSignificances(structural, analyzed.significances, analyzed.overview, {
+    deterministicMs: analyzed.deterministicMs,
+    enrichMs: 0,
+    enrichAttempted: false,
+    enrichSucceeded: 0,
+    enrichFailed: 0
+  });
+  return {
+    ...withSignificance,
+    metrics: {
+      ...withSignificance.metrics,
+      totalMs: Date.now() - t0
     }
   };
 }

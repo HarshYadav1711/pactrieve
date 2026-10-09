@@ -8,6 +8,8 @@ export {
   type ComparisonDocumentMeta,
   type ComparisonResult,
   type ComparisonSummary,
+  type ComparisonOverview,
+  type ChangeSignificance,
   type SourceFocus,
   type VersionRole
 } from "./types.ts";
@@ -20,3 +22,14 @@ export {
   textSimilarity,
   tokenize
 } from "./normalize.ts";
+export {
+  analyzeComparison,
+  detectChangeSignals,
+  applySeverityRubric,
+  filterChanges,
+  sortChanges,
+  type Severity,
+  type SeverityFilter,
+  type SortMode
+} from "./significance/index.ts";
+/** Server-only enrichment — import from `@/lib/compare/significance` in API routes. */
