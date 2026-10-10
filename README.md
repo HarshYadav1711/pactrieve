@@ -8,7 +8,7 @@ Evidence-first legal contract workspace for an SDE hiring assignment: upload PDF
 
 - **Application:** [https://pactrieve.vercel.app](https://pactrieve.vercel.app)
 - **Source:** [https://github.com/HarshYadav1711/pactrieve](https://github.com/HarshYadav1711/pactrieve)
-- **Demo video:** _pending upload — see `docs/DEMO_SCRIPT.md`_
+- **Demo video:** [https://drive.google.com/file/d/12Nv6t-ZA7M_FdsCfClSaMdUZOBFDdsPs/view?usp=drive_link](https://drive.google.com/file/d/12Nv6t-ZA7M_FdsCfClSaMdUZOBFDdsPs/view?usp=drive_link)
 - **Engineering note:** [`docs/ENGINEERING_NOTE.md`](docs/ENGINEERING_NOTE.md)
 
 The live site uses a **shared evaluator passphrase** (not multi-user login). Request it through the private submission channel. Use only synthetic contracts.
